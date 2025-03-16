@@ -1,0 +1,88 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}系統設定{% endblock %}
+
+{% block page_title %}系統設定{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-4">系統功能設定</h5>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">系統名稱</label>
+                        <input type="text" class="form-control" name="system_name" 
+                               value="{{ settings.system_name }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">每位用戶最大專案數量</label>
+                        <input type="number" class="form-control" name="max_projects_per_user" 
+                               value="{{ settings.max_projects_per_user }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">系統功能</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="maintenance_mode"
+                                   {% if settings.maintenance_mode %}checked{% endif %}>
+                            <label class="form-check-label">維護模式</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="allow_registration"
+                                   {% if settings.allow_registration %}checked{% endif %}>
+                            <label class="form-check-label">允許註冊</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="enable_email_notifications"
+                                   {% if settings.enable_email_notifications %}checked{% endif %}>
+                            <label class="form-check-label">啟用郵件通知</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">備份頻率</label>
+                        <select class="form-select" name="backup_frequency">
+                            <option value="daily" {% if settings.backup_frequency == 'daily' %}selected{% endif %}>每日</option>
+                            <option value="weekly" {% if settings.backup_frequency == 'weekly' %}selected{% endif %}>每週</option>
+                            <option value="monthly" {% if settings.backup_frequency == 'monthly' %}selected{% endif %}>每月</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">保存設定</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-4">系統狀態</h5>
+                <div class="mb-3">
+                    <label class="form-label">系統版本</label>
+                    <p class="form-control-static">{{ settings.version }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">最後更新時間</label>
+                    <p class="form-control-static">{{ settings.last_update.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">資料庫狀態</label>
+                    <p class="form-control-static">
+                        <span class="badge bg-success">正常運行中</span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">系統負載</label>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 25%">25%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

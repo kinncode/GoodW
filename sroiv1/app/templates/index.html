@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>SROI評估系統</title>
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+   <link href="../static/main.css" rel="stylesheet">
+ 
+</head>
+<body>
+   <!-- Alert 容器 -->
+   <div id="alertContainer"></div>
+   <!-- 隱藏的 Flash 訊息容器 -->
+   <div id="flashMessages" style="display: none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div data-message="{{ message }}" data-category="{{ category }}"></div>
+        {% endfor %}
+    {% endwith %}
+    </div>
+
+
+<!-- 導覽列 -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">SROI 智能評析平台</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                {% if session.get('user_id') %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.my_projects' %}active{% endif %}" 
+                       href="{{ url_for('main.my_projects') }}">
+                        我的專案
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#tutorialModal">
+                        使用教學
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {% if session.get('user_id') %}
+                <!-- 使用者下拉選單 -->
+                <div class="dropdown">
+                    <button class="btn text-white dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ session.get('username') }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('main.my_profile') }}">
+                                <i class="bi bi-person me-2"></i>我的資訊
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-gear me-2"></i>設定
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{{ url_for('main.logout') }}">
+                                <i class="bi bi-box-arrow-right me-2"></i>登出
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            {% else %}
+                <a class="btn btn-warning ms-3 d-flex align-items-center justify-content-center" style="min-width: 80px;" href="{{ url_for('main.login') }}">登入</a>
+            {% endif %}
+        </div>
+    </div>
+ </nav>
+
+   <!-- 主內容 -->
+   <div class="main-content container">
+       <h1 class="mb-5">歡迎來到SROI智能評析平台</h1> 
+       {% if session.get('user_id') %}
+       <div class="row g-4 justify-content-center">
+<!-- 快速操作卡片 -->
+   <div class="col-md-4">
+       <div class="card h-100 border-0 shadow-sm">
+           <div class="card-body text-center">
+               <i class="bi bi-plus-circle fs-1 text-primary mb-3"></i>
+               <h3 class="card-title h5">建立新專案</h3>
+               <p class="card-text">快速建立一個新的SROI評估專案</p>
+               <a href="{{ url_for('main.my_projects') }}?openModal=create" class="btn btn-primary">開始建立</a>
+           </div>
+       </div>
+   </div>
+           <!-- 最近專案卡片 -->
+           <div class="col-md-4">
+               <div class="card h-100 border-0 shadow-sm">
+                   <div class="card-body text-center">
+                       <i class="bi bi-clock-history fs-1 text-success mb-3"></i>
+                       <h3 class="card-title h5">最近的專案</h3>
+                       <p class="card-text">查看您最近處理的SROI專案</p>
+                       <a href="{{ url_for('main.my_projects') }}" class="btn btn-success">查看專案</a>
+                   </div>
+               </div>
+           </div>
+           
+           <!-- 使用指南卡片 -->
+           <div class="col-md-4">
+               <div class="card h-100 border-0 shadow-sm">
+                   <div class="card-body text-center">
+                       <i class="bi bi-book fs-1 text-info mb-3"></i>
+                       <h3 class="card-title h5">使用指南</h3>
+                       <p class="card-text">了解如何更有效地使用本系統</p>
+                       <button class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#tutorialModal">
+                           查看指南
+                       </button>
+                   </div>
+               </div>
+           </div>
+       </div>
+       {% else %}
+       <div class="row justify-content-center">
+           <div class="col-md-8">
+               <div class="card border-0 shadow-sm">
+                   <div class="card-body text-center p-5">
+                       <h2 class="mb-4">社會投資報酬率評估系統</h2>
+                       <p class="lead mb-4">本系統幫助組織評估其社會影響力，生成專業的SROI報告。</p>
+                       <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                           <a href="{{ url_for('main.login') }}" class="btn btn-primary btn-lg px-4 me-md-2">登入系統</a>
+                           <a href="{{ url_for('main.register') }}" class="btn btn-outline-secondary btn-lg px-4">註冊帳號</a>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+       {% endif %}
+   </div>
+
+   <!-- 使用教學 Modal -->
+   <div class="modal fade" id="tutorialModal" tabindex="-1">
+       <div class="modal-dialog modal-lg">
+           <div class="modal-content">
+               <div class="modal-header">
+                   <h5 class="modal-title">SROI系統使用教學</h5>
+                   <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+               </div>
+               <div class="modal-body">
+                   <div class="row g-4">
+                       <div class="col-md-6">
+                           <h6><i class="bi bi-1-circle"></i> 建立專案</h6>
+                           <p>點擊「建立專案」按鈕，填寫基本資訊開始您的SROI評估。</p>
+                       </div>
+                       <div class="col-md-6">
+                           <h6><i class="bi bi-2-circle"></i> 添加利害關係人</h6>
+                           <p>識別並記錄專案中的主要利害關係人。</p>
+                       </div>
+                       <div class="col-md-6">
+                           <h6><i class="bi bi-3-circle"></i> 輸入資料</h6>
+                           <p>記錄投入、產出和影響力相關的數據。</p>
+                       </div>
+                       <div class="col-md-6">
+                           <h6><i class="bi bi-4-circle"></i> 生成報告</h6>
+                           <p>系統會自動計算SROI比率並生成完整報告。</p>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </div>
+
+   <!-- 確保 Modal 的 HTML 結構正確 -->
+   <div class="modal fade" id="createProjectModal" tabindex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
+       <div class="modal-dialog modal-lg">
+           <div class="modal-content">
+               <div class="modal-header">
+                   <h5 class="modal-title" id="createProjectModalLabel">建立新專案</h5>
+                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+               </div>
+               <form action="{{ url_for('main.create_project') }}" method="POST" id="createProjectForm" novalidate>
+                   <div class="modal-body">
+                       <!-- 表單內容 -->
+                   </div>
+                   <div class="modal-footer">
+                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                       <button type="submit" class="btn btn-primary">建立</button>
+                   </div>
+               </form>
+           </div>
+       </div>
+   </div>
+
+   <!-- Scripts -->
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+   <script src="../static/main.js"></script>
+   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 處理 Flash 訊息
+        const flashDiv = document.getElementById('flashMessages');
+        const messages = flashDiv.getElementsByTagName('div');
+        
+        for (let messageDiv of messages) {
+            const message = messageDiv.getAttribute('data-message');
+            const category = messageDiv.getAttribute('data-category');
+            if (message && category) {
+                showAlert(message, category);
+            }
+        }
+
+        // 確保 Bootstrap 的 JavaScript 正確加載
+        const createProjectModal = new bootstrap.Modal(document.getElementById('createProjectModal'));
+
+        // 監聽 Modal 關閉事件
+        document.getElementById('createProjectModal').addEventListener('hidden.bs.modal', function () {
+            // 移除殘留的 modal-backdrop
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.remove();
+            });
+        });
+    });
+</script>
+</body>
+</html>

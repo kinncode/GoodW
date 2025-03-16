@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    /* 整體容器樣式 */
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* 卡片樣式 */
+    .profile-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 卡片標題樣式 */
+    .card-header {
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        border-radius: 12px 12px 0 0;
+        padding: 1.5rem;
+    }
+
+    .card-header h5 {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    /* 表單樣式 */
+    .form-label {
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #2c3e50;
+        box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+    }
+
+    .form-control.bg-light {
+        background-color: #f8f9fa !important;
+    }
+
+    /* 統計卡片樣式 */
+    .stats-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-card h3 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-card p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    /* 按鈕樣式 */
+    .btn-primary {
+        background-color: #2c3e50;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #34495e;
+        transform: translateY(-1px);
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+        .profile-container {
+            padding: 1rem;
+        }
+
+        .card-header {
+            padding: 1rem;
+        }
+
+        .form-control {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem;
+        }
+    }
+</style> 
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- 個人資料卡片 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-circle me-2"></i>個人資料
+                    </h5>
+                    <a href="{{ url_for('main.my_projects') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-folder me-1"></i>我的專案
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.my_profile') }}">
+                        <!-- 基本資料區塊 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">基本資料</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">用戶名稱</label>
+                                    <input type="text" class="form-control bg-light" value="{{ current_user.username }}" disabled>
+                                    <small class="text-muted">用戶名稱無法更改</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">電子郵件</label>
+                                    <input type="email" name="email" class="form-control" value="{{ current_user.email }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 帳號資訊區塊 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">帳號資訊</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">註冊時間</label>
+                                    <input type="text" class="form-control bg-light" value="{{ current_user.created_at.strftime('%Y-%m-%d %H:%M') }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">帳號類型</label>
+                                    <input type="text" class="form-control bg-light" value="{{ '管理員' if current_user.role == 'admin' else '一般用戶' }}" disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 密碼修改區塊 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">修改密碼</h6>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">目前密碼</label>
+                                    <input type="password" name="current_password" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">新密碼</label>
+                                    <input type="password" name="new_password" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">確認新密碼</label>
+                                    <input type="password" name="confirm_password" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 帳號狀態區塊 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">帳號狀態</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">帳號到期日</label>
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ current_user.account_expires.strftime('%Y-%m-%d') if current_user.account_expires else '永久有效' }}" 
+                                           disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">密碼到期日</label>
+                                    <input type="text" class="form-control bg-light" 
+                                           value="{{ current_user.password_expires.strftime('%Y-%m-%d') if current_user.password_expires else '永久有效' }}" 
+                                           disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 按鈕區塊 -->
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>儲存變更
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 專案統計卡片 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>專案統計
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{ current_user.projects|length }}</h3>
+                                <p class="text-muted mb-0">總專案數</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-success">{{ current_user.projects|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                                <p class="text-muted mb-0">已完成專案</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-warning">{{ current_user.projects|selectattr('status', 'equalto', 'in_progress')|list|length }}</h3>
+                                <p class="text-muted mb-0">進行中專案</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'ai_assistant.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const newPassword = form.querySelector('[name="new_password"]').value;
+        const confirmPassword = form.querySelector('[name="confirm_password"]').value;
+        
+        if (newPassword || confirmPassword) {
+            e.preventDefault();
+            if (newPassword !== confirmPassword) {
+                showAlert('新密碼與確認密碼不符', 'danger');
+                return;
+            }
+            if (newPassword.length < 8) {
+                showAlert('新密碼長度必須至少8個字元', 'danger');
+                return;
+            }
+            form.submit();
+        }
+    });
+});
+</script>
+{% endblock %}

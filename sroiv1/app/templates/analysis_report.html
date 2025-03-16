@@ -1,0 +1,1114 @@
+{% include 'services/ai_assistant.html' %}
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4 px-4">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <h3 class="mb-0">專案分析報告</h3>
+                    <h5 class="text-muted mb-0">{{ project.project_name }}</h5>
+                </div>
+                <div>
+                    <a href="{{ url_for('main.my_projects') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>返回專案列表
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- 新增的卡片區域 -->
+        <div class="row mt-4">
+            <div class="col-lg-4">
+                <div class="card sroi-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">SROI</h5>
+                        {% if analysis_data is mapping %}
+                            <h2 class="text-primary display-4">{{ "%.2f"|format(analysis_data.project_sroi) }}</h2>
+                        {% else %}
+                            <h2 class="text-primary display-4">0.00</h2>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card sroi-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">總影響力價值</h5>
+                        <h2 class="text-success display-4">{{ analysis_data.total_impact|int }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card sroi-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">總受益人數</h5>
+                        <h2 class="text-info display-4">{{ analysis_data.total_population|int }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-lg-3">
+                    <div class="card">
+                        <div class="card-body" style="height: 400px;">
+                            <h5 class="card-title">成果類別占比</h5>
+                            <canvas id="resultTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="card">
+                        <div class="card-body" style="height: 400px;">
+                            <h5 class="card-title">各利害關係者平均人數占比</h5>
+                            <canvas id="populationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="card">
+                        <div class="card-body" style="height: 400px;">
+                            <h5 class="card-title">各利害關係者成果SROI比較</h5>
+                            <canvas id="sroiChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="card">
+                        <div class="card-body" style="height: 400px;">
+                            <h5 class="card-title">成果權重分布</h5>
+                            <canvas id="weightChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 樹狀圖區域 -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-body" style="height: 500px;">
+                            <h5 class="card-title">利害關係者人數分布</h5>
+                            <canvas id="populationBubbleChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-body" style="height: 500px;">
+                            <h5 class="card-title">利害關係人影響力因子分布</h5>
+                            <canvas id="factorsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 詳細數據表格 -->
+            <div class="table-responsive mt-4">
+                <h5 class="mb-3">詳細分析數據</h5>
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>利害關係人</th>
+                            <th>受益人數</th>
+                            <th>影響力分數</th>
+                            <th>SROI</th>
+                            <th>詳細資料</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for metrics in analysis_data.stakeholder_metrics.values() %}
+                        <tr>
+                            <td>{{ metrics.name }}</td>
+                            <td>{{ metrics.population }}</td>
+                            <td>{{ "%.2f"|format(metrics.total_impact) }}</td>
+                            <td>{{ "%.2f"|format(metrics.total_sroi) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#table-details-{{ loop.index }}">
+                                    查看詳情
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="table-details-{{ loop.index }}">
+                            <td colspan="5">
+                                <div class="p-3">
+                                    <h6>成果詳情：</h6>
+                                    <ul class="list-unstyled">
+                                        {% for result in metrics.results %}
+                                        <li class="mb-2">
+                                            <strong>成果描述：</strong> {{ result.description }}<br>
+                                            <strong>影響力分數：</strong> {{ "%.2f"|format(result.impact_score) }}<br>
+                                            <strong>SROI：</strong> {{ "%.2f"|format(result.sroi) }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 修改綜合分析數據表格 -->
+            <div class="table-responsive mt-4">
+                <h5 class="mb-3">綜合分析數據</h5>
+                <div class="d-none d-lg-block"> <!-- 桌面版表格 -->
+                    <table class="table table-hover table-striped table-bordered table-modern">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="bg-primary text-white">利害關係人</th>
+                                <th class="bg-primary text-white">投入項目</th>
+                                <th class="bg-primary text-white">投入(單位)</th>
+                                <th class="bg-primary text-white">產出成果</th>
+                                <th class="bg-primary text-white">成果事件鏈</th>
+                                <th class="bg-primary text-white">指標名稱</th>
+                                <th class="bg-primary text-white">規模(人數)</th>
+                                <th class="bg-primary text-white">持續時間</th>
+                                <th class="bg-primary text-white">{% if analysis_data.results[0]['indicator'] and analysis_data.results[0]['indicator']['pricing_amount'] %}定價{% else %}權重{% endif %}</th>
+                                <th class="bg-primary text-white">無謂因子</th>
+                                <th class="bg-primary text-white">移轉因子</th>
+                                <th class="bg-primary text-white">歸因因子</th>
+                                <th class="bg-primary text-white">衰減因子</th>
+                                <th class="bg-primary text-white">影響價值（元）</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metrics in analysis_data.stakeholder_metrics.values() %}
+                                {% set rowspan = metrics.results|length if metrics.results else 1 %}
+                                {% if metrics.results %}
+                                    {% for result in metrics.results %}
+                                    <tr>
+                                        {% if loop.first %}
+                                            <td rowspan="{{ rowspan }}" class="align-middle fw-bold">{{ metrics.name }}</td>
+                                            <td rowspan="{{ rowspan }}" class="align-middle">
+                                                {% if metrics.contribution %}
+                                                    <span class="badge bg-info">{{ metrics.contribution.resource_type }}</span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td rowspan="{{ rowspan }}" class="align-middle">
+                                                {% if metrics.contribution %}
+                                                    <span class="badge bg-success">
+                                                        {{ metrics.contribution.resource_amount }} 
+                                                        {{ '小時' if metrics.contribution.resource_type == 'time' else '元' }}
+                                                    </span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+                                        <td>{{ result.description if result.description else '-' }}</td>
+                                        <td>{{ result.event_chain if result.event_chain else '-' }}</td>
+                                        <td>{{ result.indicator.indicator_name if result.indicator else '-' }}</td>
+                                        <td>{{ result.indicator.scale_population if result.indicator else '-' }}</td>
+                                        <td>{{ result.indicator.duration if result.indicator else '-' }}</td>
+                                        <td>
+                                            {% if result.indicator and result.indicator.pricing_amount %}
+                                                {{ "%.2f"|format(result.indicator.pricing_amount) }}
+                                            {% else %}
+                                                {{ result.indicator.weight if result.indicator else '-' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ result.impact_factor.deadweight if result.impact_factor else '-' }}</td>
+                                        <td>{{ result.impact_factor.displacement if result.impact_factor else '-' }}</td>
+                                        <td>{{ result.impact_factor.attribution if result.impact_factor else '-' }}</td>
+                                        <td>{{ result.impact_factor.drop_off if result.impact_factor else '-' }}</td>
+                                        <td>{{ "%.2f"|format(result.impact_score) if result.impact_score else '-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td class="align-middle fw-bold">{{ metrics.name }}</td>
+                                        <td class="align-middle">
+                                            {% if metrics.contribution %}
+                                                <span class="badge bg-info">{{ metrics.contribution.resource_type }}</span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if metrics.contribution %}
+                                                <span class="badge bg-success">
+                                                    {{ metrics.contribution.resource_amount }} 
+                                                    {{ '小時' if metrics.contribution.resource_type == 'time' else '元' }}
+                                                </span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td colspan="11">無相關成果</td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                            <!-- 總計行 -->
+                            <tr class="table-total">
+                                <td colspan="13" class="text-end fw-bold">總影響價值（元）</td>
+                                <td class="fw-bold">
+                                    <span class="badge bg-success">
+                                        {{ "%.2f"|format(analysis_data.total_impact_value) }} 元
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr class="table-total">
+                                <td colspan="13" class="text-end fw-bold">總投入成本</td>
+                                <td class="fw-bold">
+                                    <span class="badge bg-info">
+                                        {{ "%.2f"|format(analysis_data.total_input) }} 元
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr class="table-total">
+                                <td colspan="13" class="text-end fw-bold">總SROI</td>
+                                <td class="fw-bold">
+                                    <span class="badge bg-primary">
+                                        {{ "%.2f"|format(analysis_data.project_sroi) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-block d-lg-none"> <!-- 手機版卡片式顯示 -->
+                    <div class="row">
+                        {% for metrics in analysis_data.stakeholder_metrics.values() %}
+                        <div class="col-12 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ metrics.name }}</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">投入項目</small>
+                                            <p>
+                                                {% if metrics.contribution %}
+                                                    <span class="badge bg-info">{{ metrics.contribution.resource_type }}</span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">投入(單位)</small>
+                                            <p>
+                                                {% if metrics.contribution %}
+                                                    <span class="badge bg-success">
+                                                        {{ metrics.contribution.resource_amount }} 
+                                                        {{ '小時' if metrics.contribution.resource_type == 'time' else '元' }}
+                                                    </span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">受益人數</small>
+                                            <p>{{ metrics.population }}</p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">影響力分數</small>
+                                            <p>{{ "%.2f"|format(metrics.total_impact) }}</p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">SROI</small>
+                                            <p>{{ "%.2f"|format(metrics.total_sroi) }}</p>
+                                        </div>
+                                        <div class="col-6">
+                                            <button class="btn btn-sm btn-outline-primary w-100" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#card-details-{{ loop.index }}">
+                                                查看詳情
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="card-details-{{ loop.index }}">
+                                        <div class="p-3">
+                                            <h6>成果詳情：</h6>
+                                            <ul class="list-unstyled">
+                                                {% for result in metrics.results %}
+                                                <li class="mb-3">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body">
+                                                            <strong>成果描述：</strong> {{ result.description }}<br>
+                                                            <strong>事件鏈：</strong> {{ result.event_chain if result.event_chain else '-' }}<br>
+                                                            <strong>指標名稱：</strong> {{ result.indicator.indicator_name if result.indicator else '-' }}<br>
+                                                            <strong>規模(人數)：</strong> {{ result.indicator.scale_population if result.indicator else '-' }}<br>
+                                                            <strong>持續時間：</strong> {{ result.indicator.duration if result.indicator else '-' }}<br>
+                                                            <strong>{% if result.indicator and result.indicator.pricing_amount %}定價{% else %}權重{% endif %}：</strong> 
+                                                            {% if result.indicator and result.indicator.pricing_amount %}
+                                                                {{ "%.2f"|format(result.indicator.pricing_amount) }}
+                                                            {% else %}
+                                                                {{ result.indicator.weight if result.indicator else '-' }}
+                                                            {% endif %}<br>
+                                                            <strong>無謂因子：</strong> {{ result.impact_factor.deadweight if result.impact_factor else '-' }}<br>
+                                                            <strong>移轉因子：</strong> {{ result.impact_factor.displacement if result.impact_factor else '-' }}<br>
+                                                            <strong>歸因因子：</strong> {{ result.impact_factor.attribution if result.impact_factor else '-' }}<br>
+                                                            <strong>衰減因子：</strong> {{ result.impact_factor.drop_off if result.impact_factor else '-' }}<br>
+                                                            <strong>影響價值（元）：</strong> {{ "%.2f"|format(result.impact_score) if result.impact_score else '-' }}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 計算方式說明區 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">計算方式說明</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold">SROI 計算公式</h6>
+                                        <div class="p-3 bg-light rounded">
+                                            <p class="mb-2">SROI = 總影響力價值 / 總投入成本</p>
+                                            <p class="mb-0 text-muted small">
+                                                其中，總影響力價值 = Σ(成果貨幣價值 × 影響力因子調整值)<br>
+                                                影響力因子調整值 = (1 - 無謂因子) × (1 - 移轉因子) × 歸因因子 × (1 - 衰減因子)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold">影響力分數計算</h6>
+                                        <div class="p-3 bg-light rounded">
+                                            <p class="mb-2">影響力分數 = 成果指標數值 × 權重 × 影響力因子調整值</p>
+                                            <p class="mb-0 text-muted small">
+                                                權重範圍：1-10，反映成果的相對重要性<br>
+                                                指標數值：根據實際調查或估算得出
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold">影響力因子說明</h6>
+                                        <div class="p-3 bg-light rounded">
+                                            <ul class="list-unstyled mb-0">
+                                                <li class="mb-2">
+                                                    <span class="fw-bold text-danger">無謂因子：</span>
+                                                    即使沒有此專案，原本就會發生的改變比例
+                                                </li>
+                                                <li class="mb-2">
+                                                    <span class="fw-bold text-primary">移轉因子：</span>
+                                                    改變轉移到其他群體或地區的比例
+                                                </li>
+                                                <li class="mb-2">
+                                                    <span class="fw-bold text-warning">歸因因子：</span>
+                                                    可歸因於本專案的改變比例
+                                                </li>
+                                                <li>
+                                                    <span class="fw-bold text-success">衰減因子：</span>
+                                                    隨時間減少的效益比例
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold">注意事項</h6>
+                                        <div class="p-3 bg-light rounded">
+                                            <ul class="mb-0 small">
+                                                <li>所有因子數值範圍為0-100%</li>
+                                                <li>SROI值大於1表示投資報酬為正向</li>
+                                                <li>計算結果應結合質化分析綜合評估</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 在卡片區域下方加入詳細計算結果 -->
+            <div class="row mt-4">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">詳細計算結果</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>總影響力價值</h6>
+                                    <p>{{ "%.2f"|format(analysis_data.total_impact) }} 元</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>總投入成本</h6>
+                                    <p>{{ "%.2f"|format(analysis_data.total_input) }} 元</p>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <h6>SROI 計算公式</h6>
+                                    <p>SROI = 總影響力價值 / 總投入成本</p>
+                                    <p>SROI = {{ "%.2f"|format(analysis_data.total_impact) }} / {{ "%.2f"|format(analysis_data.total_input) }} = {{ "%.2f"|format(analysis_data.project_sroi) }}</p>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <h6>影響力價值計算公式</h6>
+                                    <p>
+                                        影響力價值 = 
+                                        {% if analysis_data.results[0]['indicator'] and analysis_data.results[0]['indicator']['pricing_amount'] %}
+                                            規模(人數) × 定價金額 × (1 - 無謂因子) × (1 - 移轉因子) × (1 - 歸因因子) × (1 - 衰減因子)
+                                        {% else %}
+                                            規模(人數) × 權重 × (1 - 無謂因子) × (1 - 移轉因子) × (1 - 歸因因子) × (1 - 衰減因子)
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 在詳細計算結果區塊下方加入 AI 評估區塊 -->
+            <div class="row mt-4">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">AI 專案評估</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div id="aiEvaluationResult" class="p-3 bg-light rounded">
+                                        <p class="text-muted">點擊按鈕開始 AI 評估...</p>
+                                    </div>
+                                    <button id="aiEvaluateBtn" class="btn btn-primary mt-3">
+                                        <i class="bi bi-robot me-2"></i>開始 AI 評估
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>   
+    </div>
+    <!-- 在分析報告頁面底部加入 AI 助理區塊 -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- 載入 Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- 載入樹狀圖插件 -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.1.1/dist/chartjs-chart-treemap.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 將分析數據解析一次並存為全域變數，避免重複解析
+    const globalAnalysisData = JSON.parse('{{ analysis_data|tojson|safe }}');
+    
+    // 成果SROI比較長條圖
+    new Chart(document.getElementById('sroiChart'), {
+        type: 'bar',
+        data: {
+            labels: globalAnalysisData.results.map(item => item.name),
+            datasets: [{
+                label: 'SROI值',
+                data: globalAnalysisData.results.map(item => item.sroi),
+                backgroundColor: '#36A2EB'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'SROI 值',
+                        padding: {
+                            top: 10
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '成果',
+                        padding: {
+                            right: 10
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            // 限制標籤長度，超過部分用...表示
+                            const label = this.getLabelForValue(value);
+                            if (label.length > 15) {
+                                return label.substr(0, 15) + '...';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: '成果SROI比較',
+                    padding: {
+                        top: 10,
+                        bottom: 10
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            // 在提示框中顯示完整文字
+                            return globalAnalysisData.results[context[0].dataIndex].name;
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 15,
+                    right: 15,
+                    top: 15,
+                    bottom: 15
+                }
+            }
+        }
+    });
+
+    // 利害關係人分布圓餅圖
+    new Chart(document.getElementById('populationChart'), {
+        type: 'pie',
+        data: {
+            labels: globalAnalysisData.population_distribution.map(item => item.name),
+            datasets: [{
+                data: globalAnalysisData.population_distribution.map(item => item.value),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: '利害關係人分布'
+                }
+            }
+        }
+    });
+
+    // 成果類別占比圓餅圖
+    new Chart(document.getElementById('resultTypeChart'), {
+        type: 'pie',
+        data: {
+            labels: globalAnalysisData.result_types.map(item => item.name),
+            datasets: [{
+                data: globalAnalysisData.result_types.map(item => item.count),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: '成果類別分布'
+                }
+            }
+        }
+    });
+
+    // 成果SROI關係圖
+    new Chart(document.getElementById('treeChart'), {
+        type: 'bubble',
+        data: {
+            datasets: globalAnalysisData.results.map(result => ({
+                label: result.stakeholder,
+                data: [{
+                    x: result.sroi,
+                    y: Math.random() * 10,  // 隨機分布以避免重疊
+                    r: Math.max(result.sroi * 10, 5)  // 氣泡大小
+                }],
+                backgroundColor: function(context) {
+                    const value = result.sroi;
+                    return value >= 1 ? '#4BC0C0' : '#FF6384';
+                }
+            }))
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'SROI 值'
+                    }
+                },
+                y: {
+                    display: false
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: '成果SROI關係圖'
+                },
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return globalAnalysisData.results[context.datasetIndex].name;
+                        },
+                        label: function(context) {
+                            return `SROI: ${context.raw.x.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 成果權重分布圖
+    new Chart(document.getElementById('weightChart'), {
+        type: 'bar',
+        data: {
+            labels: globalAnalysisData.results.map(item => item.name),
+            datasets: [{
+                label: '權重值',
+                data: globalAnalysisData.results.map(item => item.weight),
+                backgroundColor: globalAnalysisData.results.map(item => {
+                    const weight = item.weight;
+                    if (weight >= 8) return '#4BC0C0';
+                    if (weight >= 5) return '#FFCE56';
+                    return '#FF6384';
+                })
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: {
+                        display: true,
+                        text: '權重值',
+                        padding: {
+                            top: 10
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '成果',
+                        padding: {
+                            right: 10
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            // 限制標籤長度
+                            const label = this.getLabelForValue(value);
+                            if (label.length > 15) {
+                                return label.substr(0, 15) + '...';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: '成果權重重要性',
+                    padding: {
+                        top: 10,
+                        bottom: 10
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            // 在提示框中顯示完整文字
+                            return globalAnalysisData.results[context[0].dataIndex].name;
+                        },
+                        label: function(context) {
+                            const weight = context.raw;
+                            let importance = '';
+                            if (weight >= 8) importance = '高度重要';
+                            else if (weight >= 5) importance = '中度重要';
+                            else importance = '一般重要';
+                            return [
+                                `權重: ${weight}`,
+                                `重要性: ${importance}`
+                            ];
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 15,
+                    right: 15,
+                    top: 15,
+                    bottom: 15
+                }
+            }
+        }
+    });
+
+    // 影響力因子分布圖
+    new Chart(document.getElementById('factorsChart'), {
+        type: 'bar',
+        data: {
+            labels: globalAnalysisData.stakeholder_factors.map(item => item.name),
+            datasets: [
+                {
+                    label: '無謂因子',
+                    data: globalAnalysisData.stakeholder_factors.map(item => item.deadweight / 100),
+                    backgroundColor: '#FF6384'
+                },
+                {
+                    label: '移轉因子',
+                    data: globalAnalysisData.stakeholder_factors.map(item => item.displacement / 100),
+                    backgroundColor: '#36A2EB'
+                },
+                {
+                    label: '歸因因子',
+                    data: globalAnalysisData.stakeholder_factors.map(item => item.attribution / 100),
+                    backgroundColor: '#FFCE56'
+                },
+                {
+                    label: '衰減因子',
+                    data: globalAnalysisData.stakeholder_factors.map(item => item.drop_off / 100),
+                    backgroundColor: '#4BC0C0'
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 1,
+                    ticks: {
+                        callback: function(value) {
+                            return (value * 100) + '%';
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '因子值 (%)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '利害關係人'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${(context.raw * 100).toFixed(1)}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 利害關係者人數泡泡圖
+    new Chart(document.getElementById('populationBubbleChart'), {
+        type: 'bubble',
+        data: {
+            datasets: [{
+                label: '利害關係者',
+                data: globalAnalysisData.stakeholder_population,
+                backgroundColor: function(context) {
+                    return context.raw.color;  // 使用分配的顏色
+                },
+                borderColor: '#FFFFFF',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '受益人數'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString(); // 格式化數字顯示
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '影響力價值（元）'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return `$${value.toLocaleString(undefined, {maximumFractionDigits: 0})}`; // 顯示金額
+                        }
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: '利害關係者分析'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const data = context.raw;
+                            return [
+                                `${data.name}`,
+                                `受益人數: ${data.population.toLocaleString()} 人`,
+                                `影響力價值: $${data.total_impact.toLocaleString(undefined, {maximumFractionDigits: 2})} 元`
+                            ];
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: function(context) {
+                        // 根據數據動態調整泡泡大小
+                        const value = context.dataset.data[context.dataIndex].r;
+                        return Math.min(30, Math.max(5, value)); // 限制泡泡大小在 5-30 之間
+                    }
+                }
+            }
+        }
+    });
+
+    // 為表格行加入點擊效果
+    const rows = document.querySelectorAll('.table-modern tbody tr');
+    rows.forEach(row => {
+        row.addEventListener('click', function() {
+            rows.forEach(r => r.classList.remove('table-active'));
+            this.classList.add('table-active');
+        });
+    });
+
+    const aiEvaluateBtn = document.getElementById('aiEvaluateBtn');
+    const aiEvaluationResult = document.getElementById('aiEvaluationResult');
+
+    // 優化：使用 requestAnimationFrame 提升逐字淡入效果的動畫效能（示意）
+    function fadeInText(text, elementId, delay = 5) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.error(`元素 ${elementId} 不存在`);
+            return;
+        }
+        element.innerHTML = '';  // 清除先前內容
+        let i = 0;
+        function fadeIn() {
+            if (i < text.length) {
+                // 處理 <br> 標籤
+                if (text.substring(i, i + 4) === '<br>') {
+                    element.innerHTML += '<br>';
+                    i += 4;  // 跳過 <br> 標籤
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = text[i];
+                    span.style.opacity = 0;
+                    span.style.transition = 'opacity 0.5s';  // 淡入動畫
+                    element.appendChild(span);
+                    // 使用 requestAnimationFrame 觸發動畫
+                    requestAnimationFrame(() => {
+                        span.style.opacity = 1;
+                    });
+                    i++;
+                }
+                scrollToBottom();
+                setTimeout(fadeIn, delay);
+            } else {
+                // 結束時啟用按鈕
+                aiEvaluateBtn.disabled = false;
+                aiEvaluateBtn.innerHTML = `<i class="bi bi-robot me-2"></i>重新評估`;
+            }
+        }
+        fadeIn();
+    }
+
+    // 平滑滾動至頁尾函式保持不變
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth"
+        });
+    }
+
+    // 優化：將 AI 評估邏輯封裝到獨立函式中
+    async function performAIEvaluation() {
+        // 禁用按鈕並顯示載入狀態
+        aiEvaluateBtn.disabled = true;
+        aiEvaluateBtn.innerHTML = `
+            <div class="spinner-border spinner-border-sm me-2" role="status" aria-label="Loading">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            評估中...
+        `;
+        aiEvaluationResult.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="spinner-border text-primary me-3" role="status" aria-label="Loading">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mb-0">AI 正在評估專案，請稍候...</p>
+            </div>
+        `;
+        scrollToBottom();
+
+        try {
+            // 使用全域變數 globalAnalysisData，不再重複解析
+            const prompt = `請根據以下專案數據進行評估：
+專案名稱：{{ project.project_name }}
+總影響力價值：${globalAnalysisData.total_impact} 元
+總投入成本：${globalAnalysisData.total_input} 元
+總 SROI：${globalAnalysisData.project_sroi}
+利害關係人數：${Object.keys(globalAnalysisData.stakeholder_metrics).length}
+
+請提供：
+1. 專案整體評估
+2. 主要優點
+3. 改進建議
+4. 未來發展方向`;
+            
+            const response = await fetch('{{ url_for("main.ai_evaluate") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+            
+            // 加入 HTTP 狀態碼檢查
+            if (!response.ok) {
+                throw new Error(`伺服器回應失敗，狀態碼: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data && data.response) {
+                // 移除 ** 標記，並將 * 替換為 •
+                const cleanedResponse = data.response
+                    .replace(/\*\*/g, '') // 移除 **
+                    .replace(/\*/g, '•'); // 將 * 替換為 •
+                aiEvaluationResult.innerHTML = '';
+                fadeInText(cleanedResponse.replace(/\n/g, '<br>'), 'aiEvaluationResult');
+                scrollToBottom();
+            } else {
+                throw new Error('未收到有效的 AI 回應');
+            }
+        } catch (error) {
+            aiEvaluationResult.innerHTML = `
+                <div class="alert alert-danger">
+                    AI 評估失敗：${error.message || '未知錯誤'}
+                </div>
+            `;
+            aiEvaluateBtn.disabled = false;
+            aiEvaluateBtn.innerHTML = `<i class="bi bi-robot me-2"></i>重新評估`;
+        }
+    }
+
+    aiEvaluateBtn.addEventListener('click', performAIEvaluation);
+
+    // 新增報告優化功能
+    function optimizeReport() {
+        const reportContent = document.getElementById('reportContent').value;
+        // 發送請求到 AI 服務
+        fetch('/api/ai/optimize-report', {
+            method: 'POST',
+            body: JSON.stringify({ content: reportContent })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 顯示優化後的報告
+            document.getElementById('reportContent').value = data.optimizedContent;
+        });
+    }
+});
+</script>
+
+<!-- 加入樣式 -->
+<style>
+.ai-evaluation-content {
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
+.ai-evaluation-content h4 {
+    font-size: 1.1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.8rem;
+    color: #0d6efd;
+}
+
+.ai-evaluation-content ul {
+    padding-left: 1.5rem;
+}
+
+.ai-evaluation-content li {
+    margin-bottom: 0.5rem;
+}
+</style>
+
+{% endblock %} 

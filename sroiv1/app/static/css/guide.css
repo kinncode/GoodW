@@ -1,0 +1,43 @@
+/* 指引動畫共用樣式 */
+.guide-collapse {
+    transition: all 0.3s ease-out;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+.guide-collapse:not(.show) {
+    display: block;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    padding: 0;
+}
+
+.guide-collapse.show {
+    height: auto;
+    opacity: 1;
+    padding: 1rem;
+}
+
+/* 指引按鈕樣式 */
+.guide-button {
+    transition: all 0.2s ease;
+}
+
+.guide-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 指引內容樣式 */
+.guide-content {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease-out;
+}
+
+.show .guide-content {
+    opacity: 1;
+    transform: translateY(0);
+} 

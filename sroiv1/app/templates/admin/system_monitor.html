@@ -1,0 +1,149 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}系統監控{% endblock %}
+
+{% block page_title %}系統監控{% endblock %}
+
+{% block content %}
+{% set cpu = cpu_percent|default(0) %}
+{% set mem = memory.percent|default(0) %}
+{% set disk_usage = disk.percent|default(0) %}
+{% set mem_used = (memory.used / 1024 / 1024 / 1024)|round(2) %}
+{% set mem_total = (memory.total / 1024 / 1024 / 1024)|round(2) %}
+{% set disk_used = (disk.used / 1024 / 1024 / 1024)|round(2) %}
+{% set disk_total = (disk.total / 1024 / 1024 / 1024)|round(2) %}
+
+<div class="row">
+    <!-- CPU 使用率 -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">CPU 使用率</h5>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar" 
+                         data-value="{{ cpu }}" data-color="white">
+                        {{ cpu }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 記憶體使用率 -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">記憶體使用率</h5>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar" 
+                         data-value="{{ mem }}">
+                        {{ mem }}%
+                    </div>
+                </div>
+                <small>已使用: {{ mem_used }} GB</small>
+                <small>總計: {{ mem_total }} GB</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 磁碟使用率 -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">磁碟使用率</h5>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar" 
+                         data-value="{{ disk_usage }}">
+                        {{ disk_usage }}%
+                    </div>
+                </div>
+                <small>已使用: {{ disk_used }} GB</small>
+                <small>總計: {{ disk_total }} GB</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 在線用戶 -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+        <h5 class="card-title">在線用戶</h5>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>用戶名</th>
+                        <th>IP位址</th>
+                        <th>登入時間</th>
+                        <th>最後活動</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in active_sessions %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.ip_address or '未知' }}</td>
+                        <td>{{ user.login_time.strftime('%Y-%m-%d %H:%M:%S') if user.login_time else '未知' }}</td>
+                        <td>{{ user.last_activity.strftime('%Y-%m-%d %H:%M:%S') if user.last_activity else '未知' }}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="forceLogout('{{ user.id }}')">
+                                強制登出
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 系統事件圖表 -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+        <h5 class="card-title">系統事件統計</h5>
+        <canvas id="eventChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 系統事件圖表
+    const ctx = document.getElementById('eventChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+            datasets: [{
+                label: '系統事件數',
+                data: [12, 19, 3, 5, 2, 3],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        }
+    });
+
+    // 強制登出功能
+    function forceLogout(sessionId) {
+        if (confirm('確定要強制登出該用戶嗎？')) {
+            fetch(`/admin/force-logout/${sessionId}`, {
+                method: 'POST'
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
+    }
+
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+        const value = bar.dataset.value;
+        const color = bar.dataset.color;
+        bar.style.width = value + '%';
+        if (color) bar.style.color = color;
+    });
+</script>
+{% endblock %} 

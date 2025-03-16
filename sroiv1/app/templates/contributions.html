@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h3 class="mb-0">貢獻程度 (Step 2)</h3>
+                <button type="button" class="btn btn-outline-primary btn-sm guide-button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#guideCollapse" 
+                        aria-expanded="false">
+                    <i class="bi bi-info-circle me-1"></i>填寫指引
+                </button>
+            </div>
+            <div class="guide-collapse" id="guideCollapse">
+                <div class="guide-content">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-primary mb-3">
+                                <i class="bi bi-lightbulb me-2"></i>評估指引
+                            </h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>高度貢獻 (80-100%)</strong>：
+                                    <br>主要推動者，決定性影響
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>中度貢獻 (40-79%)</strong>：
+                                    <br>重要參與者，有明顯影響
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>低度貢獻 (1-39%)</strong>：
+                                    <br>間接參與，影響較小
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-primary mb-3">
+                                <i class="bi bi-pencil me-2"></i>評估要點
+                            </h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-arrow-right text-primary me-2"></i>
+                                    考慮各方在專案中的實際參與度
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-arrow-right text-primary me-2"></i>
+                                    評估其對成果的直接影響程度
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-arrow-right text-primary me-2"></i>
+                                    所有利害關係者的貢獻總和應為 100%
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-muted">
+                        <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            提示：可以使用滑桿來調整貢獻比例
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form id="contributionsForm" data-project-id="{{ project.id }}" onsubmit="event.preventDefault(); return saveContributions();">
+            <div class="table-responsive p-3">
+                <table class="table table-bordered table-hover table-contributions">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 150px;">利害關係者</th>
+                            <th style="min-width: 120px;">投入項目</th>
+                            <th style="min-width: 150px;">投入(單位)</th>
+                            <th style="min-width: 200px;">產出</th>
+                            <th class="text-center" style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contributionsContainer">
+                        <!-- 調試輸出 -->
+                        <!-- 利害關係者: {{ stakeholders|length }} -->
+                        <!-- 貢獻資料: {{ contributions|length }} -->
+                        {% if contributions %}
+                            {% for contribution in contributions %}
+                            <tr class="contribution-row">
+                                <td data-label="利害關係者">
+                                    <div class="mobile-label d-md-none">利害關係者</div>
+                                    <select class="form-select stakeholder-select" name="stakeholder_id" required>
+                                        <option value="" disabled>選擇利害關係者</option>
+                                        {% for stakeholder in stakeholders %}
+                                            <option value="{{ stakeholder.id }}" 
+                                                    {% if stakeholder.id == contribution.stakeholder_id %}selected{% endif %}>
+                                                {{ stakeholder.stakeholder_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td data-label="投入項目">
+                                    <div class="mobile-label d-md-none">投入項目</div>
+                                    <select class="form-select resource-type-select" name="resource_type" required>
+                                        <option value="" disabled>選擇投入項目</option>
+                                        <option value="time" {% if contribution.resource_type == 'time' %}selected{% endif %}>時間</option>
+                                        <option value="money" {% if contribution.resource_type == 'money' %}selected{% endif %}>金錢</option>
+                                    </select>
+                                </td>
+                                <td data-label="投入(單位)">
+                                    <div class="mobile-label d-md-none">投入(單位)</div>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control resource-amount" 
+                                               name="resource_amount" value="{{ contribution.resource_amount }}" required>
+                                        <span class="input-group-text resource-unit">
+                                            {{ '小時' if contribution.resource_type == 'time' else '元' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td data-label="產出">
+                                    <div class="mobile-label d-md-none">產出</div>
+                                    <input type="text" class="form-control output-description" 
+                                           name="output_description" value="{{ contribution.output_description }}" required>
+                                </td>
+                                <td data-label="操作" class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr class="contribution-row">
+                            <td data-label="利害關係者">
+                                <div class="mobile-label d-md-none">利害關係者</div>
+                                <select class="form-select stakeholder-select" name="stakeholder_id" required>
+                                    <option value="" disabled selected>選擇利害關係者</option>
+                                    {% for stakeholder in stakeholders %}
+                                        <option value="{{ stakeholder.id }}">{{ stakeholder.stakeholder_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="投入項目">
+                                <div class="mobile-label d-md-none">投入項目</div>
+                                <select class="form-select resource-type-select" name="resource_type" required>
+                                    <option value="" disabled selected>選擇投入項目</option>
+                                    <option value="time">時間</option>
+                                    <option value="money">金錢</option>
+                                </select>
+                            </td>
+                            <td data-label="投入(單位)">
+                                <div class="mobile-label d-md-none">投入(單位)</div>
+                                <div class="input-group">
+                                    <input type="number" class="form-control resource-amount" 
+                                           name="resource_amount" placeholder="輸入數量" required>
+                                    <span class="input-group-text resource-unit">-</span>
+                                </div>
+                            </td>
+                            <td data-label="產出">
+                                <div class="mobile-label d-md-none">產出</div>
+                                <input type="text" class="form-control output-description" 
+                                       name="output_description" placeholder="輸入產出描述" required>
+                            </td>
+                            <td data-label="操作" class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 gap-2">
+                <button type="button" class="btn btn-secondary w-100 w-md-auto mb-2 mb-md-0" id="addRowButton">
+                    <i class="bi bi-plus-circle me-2"></i>新增一列
+                </button>
+                <div class="d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
+                    <button type="button" class="btn btn-outline-primary w-100 w-md-auto mb-2 mb-md-0" id="backButton">
+                        <i class="bi bi-arrow-left-circle me-2"></i>返回
+                    </button>
+                    <button type="button" class="btn btn-success w-100 w-md-auto mb-2 mb-md-0" id="saveButton">
+                        <i class="bi bi-save2 me-2"></i>儲存
+                    </button>
+                    <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                        下一步 <i class="bi bi-arrow-right-circle ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contributionsContainer = document.getElementById('contributionsContainer');
+    const addRowButton = document.getElementById('addRowButton');
+    const saveButton = document.getElementById('saveButton');
+    const backButton = document.getElementById('backButton');
+    const form = document.getElementById('contributionsForm');
+
+    // 初始化所有資源類型的單位顯示
+    document.querySelectorAll('.resource-type-select').forEach(select => {
+        updateResourceUnit(select);
+    });
+
+    // 顯示提示訊息函數
+    function showAlert(message, type, duration = 3000) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
+        alert.role = 'alert';
+        alert.innerHTML = `
+            <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 
+                          type === 'danger' ? 'bi-exclamation-triangle-fill' : 
+                          'bi-info-circle-fill'} me-2"></i>
+            <div>${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        const alertContainer = document.getElementById('alertContainer');
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        }, duration);
+    }
+
+    // 更新單位顯示
+    function updateResourceUnit(select) {
+        const unitSpan = select.closest('tr').querySelector('.resource-unit');
+        unitSpan.textContent = select.value === 'time' ? '小時' : '元';
+    }
+
+    // 監聽資源類型選擇變更
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('resource-type-select')) {
+            updateResourceUnit(e.target);
+        }
+    });
+
+    // 新增列按鈕
+    addRowButton.addEventListener('click', function() {
+        const newRow = contributionsContainer.querySelector('tr').cloneNode(true);
+        newRow.querySelectorAll('input, select').forEach(input => {
+            input.value = '';
+        });
+        contributionsContainer.appendChild(newRow);
+    });
+
+    // 修改刪除列的邏輯
+    contributionsContainer.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-row')) {
+            const row = e.target.closest('tr');
+            const rows = contributionsContainer.querySelectorAll('tr');
+            if (rows.length > 1) {
+                row.remove();
+            }
+        }
+    });
+
+    // 修改保存貢獻資料函數
+    async function saveContributions() {
+        const projectId = form.dataset.projectId;
+        const contributions = Array.from(contributionsContainer.querySelectorAll('tr')).map(row => ({
+            stakeholder_id: row.querySelector('input[name="stakeholder_id"]')?.value || 
+                           row.querySelector('.stakeholder-select').value,
+            resource_type: row.querySelector('.resource-type-select').value,
+            resource_amount: row.querySelector('.resource-amount').value,
+            output_description: row.querySelector('.output-description').value
+        })).filter(item => 
+            item.stakeholder_id && 
+            item.resource_type && 
+            item.resource_amount && 
+            item.output_description
+        );
+
+        if (contributions.length === 0) {
+            showAlert('請至少添加一筆完整的貢獻資料', 'warning');
+            return false;
+        }
+
+        try {
+            const response = await fetch(`/save_contributions?project_id=${projectId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(contributions)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showAlert(`成功保存 ${contributions.length} 筆貢獻資料！`, 'success');
+                return true;
+            } else {
+                showAlert(result.error || '保存失敗，請檢查資料是否完整', 'danger');
+                return false;
+            }
+        } catch (error) {
+            console.error('保存時發生錯誤:', error);
+            showAlert('系統錯誤，請稍後再試', 'danger');
+            return false;
+        }
+    }
+
+    // 修改表單提交處理
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const stakeholdersData = Array.from(contributionsContainer.querySelectorAll("tr")).map(row => ({
+            stakeholder_id: row.querySelector('input[name="stakeholder_id"]')?.value || 
+                            row.querySelector('.stakeholder-select').value,
+            resource_type: row.querySelector('.resource-type-select').value,
+            resource_amount: row.querySelector('.resource-amount').value,
+            output_description: row.querySelector('.output-description').value
+        })).filter(item => 
+            item.stakeholder_id && 
+            item.resource_type && 
+            item.resource_amount && 
+            item.output_description
+        );
+        
+        const projectId = form.dataset.projectId;
+        const success = await saveContributions();
+        
+        if (success) {
+            // 跳轉到 results 頁面
+            window.location.href = `/project/${projectId}/results`;
+        }
+    });
+
+    // 保存按鈕事件
+    saveButton.addEventListener('click', async () => {
+        await saveContributions();
+    });
+
+    // 返回按鈕
+    backButton.addEventListener('click', async function() {
+        const projectId = form.dataset.projectId;
+        
+        // 返回到 stakeholder 頁面
+        window.location.href = `/stakeholder_form/${projectId}`;
+    });
+});
+</script>
+{% endblock %}
+        

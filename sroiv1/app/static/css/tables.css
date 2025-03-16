@@ -1,0 +1,147 @@
+/* 現代化表格樣式 */
+.table-modern {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.table-modern th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    background-color: #354259;
+    color: #fff;
+}
+
+.table-modern td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table-modern .badge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+}
+
+/* 表格標題背景色 */
+.table-modern th.bg-primary {
+    background-color: #354259 !important;
+    color: #fff !important;
+}
+
+/* 表格行間距 */
+.table-modern tbody tr {
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* 表格最後一行無邊框 */
+.table-modern tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* 表格圓角 */
+.table-modern thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.table-modern thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.table-modern tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.table-modern tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+/* 總計行樣式 */
+.table-total {
+    background-color: #f8f9fa;
+    border-top: 2px solid #354259;
+}
+
+.table-total td {
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 1rem;
+}
+
+.table-total .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+}
+
+/* 表格行點擊效果 */
+.table-modern tbody tr.table-active {
+    background-color: #e9ecef;
+    border-left: 4px solid #354259;
+}
+
+/* 新增 SROI 卡片樣式 */
+.sroi-card {
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.sroi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.sroi-card .card-body {
+    padding: 1.5rem;
+}
+
+.sroi-card .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #354259;
+    margin-bottom: 1rem;
+}
+
+.sroi-card .display-4 {
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+/* 不同指標的顏色樣式 */
+.sroi-card .text-primary {
+    color: #354259 !important;
+}
+
+.sroi-card .text-success {
+    color: #28a745 !important;
+}
+
+.sroi-card .text-info {
+    color: #17a2b8 !important;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .sroi-card {
+        margin-bottom: 1rem;
+    }
+    
+    .sroi-card .card-body {
+        padding: 1rem;
+    }
+    
+    .sroi-card .display-4 {
+        font-size: 2.5rem;
+    }
+} 

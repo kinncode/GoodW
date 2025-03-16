@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Alert 容器 -->
+<div id="alertContainer" class="position-fixed top-0 start-50 translate-middle-x" style="z-index: 1050; margin-top: 1rem;">
+</div>
+
+<!-- 隱藏的 Flash 訊息容器 -->
+<div id="flashMessages" style="display: none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div data-message="{{ message }}" data-category="{{ category }}"></div>
+        {% endfor %}
+    {% endwith %}
+</div>
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        {% if has_contributions %}
+        <div class="alert alert-warning mt-3 mb-0">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>
+                    <strong>注意：</strong>因為已經設定貢獻資料表。若要修改利害關係者，請先點擊「重設資料」按鈕清除所有資料。
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h3 class="mb-0">確認利害關係者 (Step 1)</h3>
+                <button type="button" class="btn btn-outline-primary btn-sm guide-button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#guideCollapse" 
+                        aria-expanded="false">
+                    <i class="bi bi-info-circle me-1"></i>填寫指引
+                </button>
+            </div>
+            <div class="guide-collapse" id="guideCollapse">
+                <div class="card card-body bg-light border-0">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-primary mb-3">
+                                <i class="bi bi-lightbulb me-2"></i>思考方向
+                            </h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    誰會直接或間接受到專案影響？
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    誰對專案的成功具有重要影響力？
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    誰會從專案中獲得效益或承擔風險？
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-primary mb-3">
+                                <i class="bi bi-pencil me-2"></i>填寫範例
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>利害關係者</strong></td>
+                                        <td>社區長者</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>組群</strong></td>
+                                        <td>服務對象</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>納入理由</strong></td>
+                                        <td>專案的主要服務對象，直接受益者</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-muted">
+                        <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            提示：可以點擊「導入預設」來查看更多範例
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form id="stakeholderForm" method="POST" 
+              data-has-contributions="{{ 'true' if has_contributions else 'false' }}"
+              {% if has_contributions %}class="form-disabled"{% endif %}>
+            <!-- 添加一個隱藏的專案 ID 欄位 -->
+            <input type="hidden" name="project_id" value="{{ project_id }}">
+            <div class="table-responsive p-3">
+                <table class="table table-stakeholders table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 150px;">主要利害關係者</th>
+                            <th style="min-width: 120px;">組群</th>
+                            <th style="min-width: 200px;">納入理由</th>
+                            <th class="text-center" style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stakeholdersContainer">
+                        {% if stakeholders %}
+                            {% for stakeholder in stakeholders %}
+                            <tr data-stakeholder-id="{{ stakeholder.id }}" class="stakeholder-row">
+                                <td data-label="主要利害關係者">
+                                    <div class="mobile-label d-md-none">主要利害關係者</div>
+                                    <input type="text" class="form-control stakeholder-name" 
+                                           name="stakeholders[{{ loop.index0 }}][name]" 
+                                           value="{{ stakeholder.stakeholder_name }}" required>
+                                </td>
+                                <td data-label="組群">
+                                    <div class="mobile-label d-md-none">組群</div>
+                                    <input type="text" class="form-control stakeholder-group" 
+                                           name="stakeholders[{{ loop.index0 }}][group]" 
+                                           value="{{ stakeholder.stakeholder_group }}" required>
+                                </td>
+                                <td data-label="納入理由">
+                                    <div class="mobile-label d-md-none">納入理由</div>
+                                    <input type="text" class="form-control stakeholder-reason" 
+                                           name="stakeholders[{{ loop.index0 }}][reason]" 
+                                           value="{{ stakeholder.stakeholder_reason }}" required>
+                                </td>
+                                <td data-label="操作" class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr class="stakeholder-row">
+                                <td data-label="主要利害關係者">
+                                    <div class="mobile-label d-md-none">主要利害關係者</div>
+                                    <input type="text" class="form-control stakeholder-name" 
+                                           name="stakeholders[0][name]" 
+                                           placeholder="輸入利害關係者" required>
+                                </td>
+                                <td data-label="組群">
+                                    <div class="mobile-label d-md-none">組群</div>
+                                    <input type="text" class="form-control stakeholder-group" 
+                                           name="stakeholders[0][group]" 
+                                           placeholder="輸入組群" required>
+                                </td>
+                                <td data-label="納入理由">
+                                    <div class="mobile-label d-md-none">納入理由</div>
+                                    <input type="text" class="form-control stakeholder-reason" 
+                                           name="stakeholders[0][reason]" 
+                                           placeholder="輸入納入理由" required>
+                                </td>
+                                <td data-label="操作" class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row" disabled>
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 gap-2">
+                <button type="button" class="btn btn-secondary w-100 w-md-auto mb-2 mb-md-0" id="addStakeholderButton" 
+                        {% if has_contributions %}disabled{% endif %}>
+                    <i class="bi bi-plus-circle me-2"></i>新增利害關係者
+                </button>
+                <button type="button" class="btn btn-outline-secondary w-100 w-md-auto" id="importDefaultsButton"
+                        {% if has_contributions %}disabled{% endif %}>
+                    <i class="bi bi-upload me-2"></i>導入預設
+                </button>
+            </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 gap-2">
+                <a href="{{ url_for('main.my_projects') }}" class="btn btn-outline-primary w-100 w-md-auto mb-2 mb-md-0" id="backButton">
+                    <i class="bi bi-arrow-left-circle me-2"></i>返回
+                </a>
+                <div class="d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
+                    {% if has_contributions %}
+                    <button type="button" class="btn btn-danger w-100 w-md-auto mb-2 mb-md-0" id="resetButton">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>重設資料
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-success w-100 w-md-auto mb-2 mb-md-0" id="saveButton"
+                            {% if has_contributions %}disabled{% endif %}>
+                        <i class="bi bi-save2 me-2"></i>儲存
+                    </button>
+                    <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                        下一步 <i class="bi bi-arrow-right-circle ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 卡驗 -->
+<div class="modal fade" id="validationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">資料驗證</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="validationModalBody">
+                <!-- Validation messages will appear here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none" style="z-index: 1100;">
+    <div class="position-absolute top-50 start-50 translate-middle">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-2 text-primary">正在導入預設資料...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const stakeholdersContainer = document.getElementById("stakeholdersContainer");
+        const addStakeholderButton = document.getElementById("addStakeholderButton");
+        const importDefaultsButton = document.getElementById("importDefaultsButton");
+        const saveButton = document.getElementById("saveButton");
+        const backButton = document.getElementById("backButton");
+        const form = document.getElementById("stakeholderForm");
+        const validationModal = new bootstrap.Modal(document.getElementById("validationModal"));
+        const validationModalBody = document.getElementById("validationModalBody");
+        let hasJustSaved = false;  // 新增一個變數來追蹤是否剛剛儲存過
+    
+        // 更新刪除按鈕狀態
+        function updateRemoveButtons() {
+            const rows = stakeholdersContainer.querySelectorAll("tr");
+            rows.forEach(row => {
+                const removeBtn = row.querySelector(".remove-row");
+                removeBtn.disabled = rows.length <= 1; // 當只有一行時禁用刪除按鈕
+            });
+        }
+    
+        // 初始化刪除按鈕狀態
+        updateRemoveButtons();
+    
+        // 當使用者修改表單資料時，重置 hasJustSaved 旗標
+        stakeholdersContainer.addEventListener("input", () => {
+            hasJustSaved = false;
+        });
+    
+        // 新增利害關係者
+        addStakeholderButton.addEventListener("click", () => {
+            const index = stakeholdersContainer.children.length;
+            const newRow = document.createElement("tr");
+            newRow.innerHTML = `
+                <td>
+                    <input type="text" class="form-control stakeholder-name" 
+                           name="stakeholders[${index}][name]" 
+                           placeholder="輸入利害關係者" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control stakeholder-group" 
+                           name="stakeholders[${index}][group]" 
+                           placeholder="輸入組群" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control stakeholder-reason" 
+                           name="stakeholders[${index}][reason]" 
+                           placeholder="輸入納入理由" required>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            stakeholdersContainer.appendChild(newRow);
+            updateRemoveButtons();
+        });
+    
+        // 刪除列按鈕
+        stakeholdersContainer.addEventListener('click', async function(e) {
+            if (e.target.closest('.remove-row')) {
+                const row = e.target.closest('tr');
+                const stakeholderId = row.dataset.stakeholderId;
+                
+                if (stakeholdersContainer.querySelectorAll('tr').length > 1) {
+                    if (stakeholderId) {
+                        // 如果是已存在的資料，需要從資料庫中刪除
+                        try {
+                            const projectId = document.querySelector('input[name="project_id"]').value;
+                            const response = await fetch(`/delete_stakeholder/${stakeholderId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            if (response.ok) {
+                                row.remove();
+                                showAlert('利害關係人已成功刪除', 'success');
+                            } else {
+                                const error = await response.json();
+                                showAlert(error.error || '刪除失敗', 'danger');
+                                return;
+                            }
+                        } catch (error) {
+                            console.error('刪除時發生錯誤:', error);
+                            showAlert('系統錯誤，請稍後再試', 'danger');
+                            return;
+                        }
+                    } else {
+                        // 如果是新增的未儲存資料，直接從 DOM 中移除
+                        row.remove();
+                    }
+                    updateRemoveButtons();
+                } else {
+                    alert('至少需要保留一列');
+                }
+            }
+        });
+        importDefaultsButton.addEventListener("click", async () => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            try {
+                loadingOverlay.classList.remove('d-none');
+                // 先確認是否要覆蓋現有資料
+                if (stakeholdersContainer.querySelectorAll('tr').length > 0) {
+                    if (!confirm('導入預設資料將會覆蓋現有的利害關係者資料，確定要繼續嗎？')) {
+                        return;
+                    }
+                }
+                const projectId = form.querySelector('input[name="project_id"]').value;
+                // 先呼叫重設 API 清除資料庫中現有的利害關係者資料
+                const resetResponse = await fetch(`/reset_stakeholder_data/${projectId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!resetResponse.ok) {
+                    const error = await resetResponse.json();
+                    showAlert(error.error || '重設資料失敗', 'danger');
+                    return;
+                }
+                // 清空現有的列
+                while (stakeholdersContainer.firstChild) {
+                    stakeholdersContainer.firstChild.remove();
+                }
+
+                const defaultStakeholders = [
+                    { name: "管理者", group: "內部管理層", reason: "負責專案的規劃和執行" },
+                    { name: "員工", group: "內部人員", reason: "直接參與專案的執行" },
+                    { name: "客戶", group: "外部使用者", reason: "專案服務的直接受益者" },
+                    { name: "社區", group: "外部利害關係人", reason: "可能受專案影響的周邊群體" }
+                ];
+                
+                // 添加預設資料
+                defaultStakeholders.forEach((stakeholder, index) => {
+                    const newRow = document.createElement("tr");
+                    newRow.innerHTML = `
+                        <td>
+                            <input type="text" class="form-control stakeholder-name" 
+                                   name="stakeholders[${index}][name]" 
+                                   value="${stakeholder.name}" required>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control stakeholder-group" 
+                                   name="stakeholders[${index}][group]" 
+                                   value="${stakeholder.group}" required>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control stakeholder-reason" 
+                                   name="stakeholders[${index}][reason]" 
+                                   value="${stakeholder.reason}" required>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    stakeholdersContainer.appendChild(newRow);
+                });
+                
+                updateRemoveButtons();
+                
+                // 自動儲存導入的預設資料
+                const stakeholdersData = defaultStakeholders.map(stakeholder => ({
+                    name: stakeholder.name,
+                    group: stakeholder.group,
+                    reason: stakeholder.reason,
+                    old_id: null
+                }));
+                
+                const success = await saveStakeholders(stakeholdersData, projectId);
+                if (success) {
+                    hasJustSaved = true;  // 設置儲存標記
+                    showAlert('預設資料已成功導入並儲存！', 'success');
+                    
+                    // 更新 stakeholderId
+                    const response = await fetch(`/get_stakeholders?project_id=${projectId}`);
+                    const savedStakeholders = await response.json();
+                    const rows = stakeholdersContainer.querySelectorAll('tr');
+                    rows.forEach((row, index) => {
+                        row.dataset.stakeholderId = savedStakeholders[index].id;
+                        // 標記每一列為已保存，避免後續重複儲存
+                        row.setAttribute("data-saved", "true");
+                    });
+                }
+            } catch (error) {
+                // 不顯示錯誤提示，因實際上是成功匯入
+            } finally {
+                loadingOverlay.classList.add('d-none');
+            }
+        });
+    
+        // 修改驗證函數
+        function validateStakeholderData(stakeholdersData) {
+            const errors = [];
+            
+            // 檢查是否有任何資料
+            if (stakeholdersData.length === 0) {
+                errors.push('請至少添加一個利害關係者');
+                return errors;
+            }
+            
+            // 檢查每個利害關係者資料
+            stakeholdersData.forEach((item, index) => {
+                if (!item.name || item.name.trim() === '') {
+                    errors.push(`第 ${index + 1} 行：主要利害關係者為必填項`);
+                }
+                if (!item.group || item.group.trim() === '') {
+                    errors.push(`第 ${index + 1} 行：組群為必填項`);
+                }
+                if (!item.reason || item.reason.trim() === '') {
+                    errors.push(`第 ${index + 1} 行：納入理由為必填項`);
+                }
+            });
+            
+            return errors;
+        }
+    
+        // 修改保存函數
+        async function saveStakeholders(stakeholdersData, projectId) {
+            const errors = validateStakeholderData(stakeholdersData);
+            
+            if (errors.length > 0) {
+                showAlert(`請修正以下問題：<ul>${errors.map(error => `<li>${error}</li>`).join('')}</ul>`, 'danger');
+                return false;
+            }
+            
+            try {
+                const response = await fetch(`/save_stakeholders?project_id=${projectId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(stakeholdersData)
+                });
+
+                if (response.ok) {
+                    showAlert(`資料已成功儲存！共儲存 ${stakeholdersData.length} 筆利害關係者資料。`, 'success');
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showAlert(error.error || '保存失敗', 'danger');
+                    return false;
+                }
+            } catch (error) {
+                console.error('保存時發生錯誤:', error);
+                showAlert('發生錯誤，請重試', 'danger');
+                return false;
+            }
+        }
+    
+        // 修改儲存按鈕事件處理
+        saveButton.addEventListener("click", async () => {
+            // 取得所有利害關係者資料
+            const stakeholdersData = Array.from(stakeholdersContainer.querySelectorAll("tr")).map(row => ({
+                name: row.querySelector(".stakeholder-name").value.trim(),
+                group: row.querySelector(".stakeholder-group").value.trim(),
+                reason: row.querySelector(".stakeholder-reason").value.trim(),
+                old_id: row.dataset.stakeholderId || null
+            })).filter(item => item.name || item.group || item.reason);
+
+            // 檢查是否有重複資料
+            const uniqueData = [];
+            const seen = new Set();
+            
+            for (const item of stakeholdersData) {
+                const key = `${item.name}|${item.group}|${item.reason}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueData.push(item);
+                }
+            }
+            
+            if (uniqueData.length !== stakeholdersData.length) {
+                showAlert('發現重複的利害關係者資料，已自動移除重複項', 'warning');
+            }
+
+            const projectId = form.querySelector('input[name="project_id"]').value;
+            const success = await saveStakeholders(uniqueData, projectId);
+            
+            if (success) {
+                // 將剛剛儲存的列標記為已保存
+                Array.from(stakeholdersContainer.querySelectorAll("tr")).forEach(row => {
+                    row.setAttribute("data-saved", "true");
+                });
+                hasJustSaved = true;  // 設置儲存標記
+                showAlert('資料已成功儲存！', 'success');
+            }
+        });
+    
+        // 返回按鈕
+        backButton.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const stakeholdersData = Array.from(stakeholdersContainer.querySelectorAll("tr")).map(row => ({
+                name: row.querySelector(".stakeholder-name").value.trim(),
+                group: row.querySelector(".stakeholder-group").value.trim(),
+                reason: row.querySelector(".stakeholder-reason").value.trim(),
+                old_id: row.dataset.stakeholderId || null
+            })).filter(item => item.name || item.group || item.reason);
+            
+            // 如果有未保存的資料，詢問是否保存
+            if (stakeholdersData.length > 0) {
+                if (confirm('是否要保存當前的利害關係者資料？')) {
+                    const projectId = document.querySelector('input[name="project_id"]').value;
+                    await saveStakeholders(stakeholdersData, projectId);
+                }
+            }
+            window.location.href = backButton.href;
+        });
+    
+        // 修改顯示提示消息的函數
+        function showAlert(message, type, duration = 3000) {  // 預設 3 秒後消失
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
+            alert.role = 'alert';
+            alert.innerHTML = `
+                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} me-2"></i>
+                <div>${message}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.appendChild(alert);
+
+            // 使用 Bootstrap 的 alert 方法來關閉提示
+            const bsAlert = new bootstrap.Alert(alert);
+            
+            // 設定定時器，在指定時間後自動關閉
+            setTimeout(() => {
+                bsAlert.close();
+                // 等待動畫完成後移除元素
+                setTimeout(() => {
+                    alert.remove();
+                }, 150);  // Bootstrap 的淡出動畫時間
+            }, duration);
+        }
+
+        // 從 data 屬性中獲取貢獻資料狀態
+        const hasContributions = document.getElementById('stakeholderForm').dataset.hasContributions === 'true';
+        if (hasContributions) {
+            // 只鎖定表單內的元素
+            document.querySelector('#stakeholderForm').querySelectorAll('input, select, button:not(#backButton):not([type="submit"]):not(#resetButton)').forEach(el => {
+                el.disabled = true;
+            });
+            
+            // 移除所有刪除按鈕
+            document.querySelector('#stakeholderForm').querySelectorAll('.remove-row').forEach(btn => {
+                btn.style.display = 'none';     
+            });
+        }
+
+        // 修改重設按鈕事件處理
+        if (resetButton) {
+            resetButton.addEventListener("click", async () => {
+                const projectId = document.querySelector('input[name="project_id"]').value;
+                
+                // 獲取將被刪除的資料數量
+                const response = await fetch(`/get_related_data_count/${projectId}`);
+                const data = await response.json();
+                
+                const message = `警告：重設將會刪除以下資料：\n` +
+                                `- 利害關係人：${data.stakeholders}\n` +
+                                `- 貢獻資料：${data.contributions}\n` +
+                                `- 成果資料：${data.results}\n` +
+                                `確定要繼續嗎？`;
+                
+                if (confirm(message)) {
+                    try {
+                        const response = await fetch(`/reset_stakeholder_data/${projectId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+
+                        if (response.ok) {
+                            showAlert('資料已重設，請重新整理頁面', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            const error = await response.json();
+                            showAlert(error.error || '重設失敗', 'danger');
+                        }
+                    } catch (error) {
+                        console.error('重設時發生錯誤:', error);
+                        showAlert('系統錯誤，請稍後再試', 'danger');
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

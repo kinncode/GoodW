@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案瀏覽</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
+    <link href="../static/main.css" rel="stylesheet">
+    <link rel="preload" href="{{ url_for('static', filename='main.css') }}" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
+</head>
+<body>
+    <body>
+        <!-- Alert 容器 -->
+        <div id="alertContainer"></div>
+        <!-- 隱藏的 Flash 訊息容器 -->
+        <div id="flashMessages" style="display: none;">
+         {% with messages = get_flashed_messages(with_categories=true) %}
+             {% for category, message in messages %}
+                 <div data-message="{{ message }}" data-category="{{ category }}"></div>
+             {% endfor %}
+         {% endwith %}
+         </div>
+     <!-- 導覽列 -->
+     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+         <div class="container-fluid">
+             <a class="navbar-brand" href="{{ url_for('main.index') }}">SROI 評估系統</a>
+             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                 <span class="navbar-toggler-icon"></span>
+             </button>
+             <div class="collapse navbar-collapse" id="navbarNav">
+                 <ul class="navbar-nav ms-auto">
+                     {% if session.get('user_id') %}
+                     <li class="nav-item">
+                         <a class="nav-link {% if request.endpoint == 'main.my_projects' %}active{% endif %}" 
+                            href="{{ url_for('main.my_projects') }}">
+                             我的專案
+                         </a>
+                     </li>
+                     <li class="nav-item">
+                         <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#tutorialModal">
+                             使用教學
+                         </a>
+                     </li>
+                     {% endif %}
+                 </ul>
+                 {% if session.get('user_id') %}
+                     <!-- 使用者下拉選單 -->
+                     <div class="dropdown">
+                         <button class="btn text-white dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             {{ session.get('username') }}
+                         </button>
+                         <ul class="dropdown-menu dropdown-menu-end">
+                             <li>
+                                 <a class="dropdown-item" href="{{ url_for('main.my_profile') }}">
+                                     <i class="bi bi-person me-2"></i>我的資訊
+                                 </a>
+                             </li>
+                             <li>
+                                 <a class="dropdown-item" href="#">
+                                     <i class="bi bi-gear me-2"></i>設定
+                                 </a>
+                             </li>
+                             <li><hr class="dropdown-divider"></li>
+                             <li>
+                                 <a class="dropdown-item text-danger" href="{{ url_for('main.logout') }}">
+                                     <i class="bi bi-box-arrow-right me-2"></i>登出
+                                 </a>
+                             </li>
+                         </ul>
+                     </div>
+                 {% else %}
+                     <a class="btn btn-warning ms-3 d-flex align-items-center justify-content-center" style="min-width: 80px;" href="{{ url_for('main.login') }}">登入</a>
+                 {% endif %}
+             </div>
+         </div>
+      </nav>
+    <!-- 主內容 -->
+<div class="container py-5">
+    <!-- 標題和功能區 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <h2 class="mb-0">專案總覽</h2>
+            <!-- 搜尋框 -->
+            <div class="position-relative">
+                <input type="text" class="form-control" id="searchProject" 
+                       placeholder="搜尋專案..." style="min-width: 250px;">
+                <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2 text-muted"></i>
+            </div>
+            <select class="form-select" style="width: auto;" id="sortProjects">
+                <option value="created_desc">創建時間 (新到舊)</option>
+                <option value="created_asc">創建時間 (舊到新)</option>
+                <option value="name_asc">專案名稱 (A-Z)</option>
+                <option value="name_desc">專案名稱 (Z-A)</option>
+                <option value="start_date">開始日期</option>
+                <option value="organization">組織名稱</option>
+            </select>
+        </div>
+        <div class="d-flex gap-3 align-items-center">
+            <!-- 快速過濾按鈕 -->
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary active" data-filter="all">
+                    全部
+                </button>
+                <button class="btn btn-outline-secondary" data-filter="completed">
+                    已完成
+                </button>
+                <button class="btn btn-outline-secondary" data-filter="in-progress">
+                    進行中
+                </button>
+            </div>
+            <!-- 視圖切換按鈕 -->
+            <div class="view-switch btn-group">
+                <button class="btn active" data-view="list">
+                    <i class="bi bi-list-ul me-1"></i>列表
+                </button>
+                <button class="btn" data-view="grid">
+                    <i class="bi bi-grid-3x3-gap me-1"></i>卡片
+                </button>
+            </div>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                <i class="bi bi-plus-lg me-1"></i> 建立專案
+            </button>
+        </div>
+    </div>
+
+    <!-- 專案列表容器 -->
+    <div id="projectsContainer" class="list-view">
+        <div class="row g-3">
+            {% if projects %}
+                {% for project in projects %}
+                <!-- 列表視圖 -->
+                <div class="col-12 list-view-item">
+                    <div class="project-item">
+                        <div class="project-status bg-{{ 'success' if project.sroi_score else 'secondary' }}"></div>
+                        <div class="project-content">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <div class="me-4">
+                                        <i class="bi bi-folder2 text-primary fs-2"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-2">{{ project.project_name }}</h5>
+                                        <div class="d-flex flex-wrap gap-3">
+                                            <div class="project-info-item">
+                                                <i class="bi bi-building"></i>
+                                                <span>{{ project.organization_name }}</span>
+                                            </div>
+                                            <div class="project-info-item">
+                                                <i class="bi bi-calendar"></i>
+                                                <span>{{ project.created_at.strftime('%Y-%m-%d') }}</span>
+                                            </div>
+                                            <div class="project-info-item">
+                                                <i class="bi bi-graph-up"></i>
+                                                <span>{{ project.analysis_nature }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="project-badge bg-{{ 'success' if project.sroi_score else 'secondary' }}">
+                                        {% if project.sroi_score %}
+                                            {{ project.sroi_score.strip() }}  {# 移除可能的空白字符 #}
+                                        {% else %}
+                                            未評分
+                                        {% endif %}
+                                    </span>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-action btn-outline-primary edit-button"
+                                                data-project-id="{{ project.id }}" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editProjectModal">
+                                            <i class="bi bi-pencil me-2"></i>編輯
+                                        </button>
+                                        <a href="{{ url_for('main.project_analysis', project_id=project.id) }}"
+                                           class="btn btn-action btn-outline-success analyze-button {{ 'disabled' if not project.sroi_score }}">
+                                            <i class="bi bi-bar-chart me-2"></i>分析
+                                        </a>
+                                        <form action="{{ url_for('main.delete_project', project_id=project.id) }}" 
+                                              method="POST" 
+                                              style="display: inline;">
+                                            <button type="submit"
+                                                    class="btn btn-action btn-outline-danger"
+                                                    onclick="return confirm('確定要刪除此專案嗎？')"
+                                                    style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                                <i class="bi bi-trash me-2"></i>
+                                                刪除
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 卡片視圖 -->
+                <div class="col-md-6 col-lg-4 grid-view-item" style="display: none;">
+                    <div class="card project-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title">{{ project.project_name }}</h5>
+                                <span class="project-badge badge {% if project.sroi_score %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ project.sroi_score or '未評分' }}
+                                </span>
+                            </div>
+                            <div class="mb-3">
+                                <div class="mb-2"><i class="bi bi-building me-2"></i>{{ project.organization_name }}</div>
+                                <div class="mb-2"><i class="bi bi-calendar me-2"></i>{{ project.created_at.strftime('%Y-%m-%d') }}</div>
+                                <div><i class="bi bi-graph-up me-2"></i>{{ project.analysis_nature }}</div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-sm btn-primary edit-button"
+                                        data-project-id="{{ project.id }}" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editProjectModal">
+                                    <i class="bi bi-pencil me-1"></i>編輯
+                                </button>
+                                <a href="{{ url_for('main.project_analysis', project_id=project.id) }}"
+                                   class="btn btn-sm btn-success analyze-button {{ 'disabled' if not project.sroi_score }}">
+                                    <i class="bi bi-bar-chart me-1"></i>分析
+                                </a>
+                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" 
+                                      method="POST" 
+                                      style="display: inline;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('確定要刪除此專案嗎？')"
+                                            style="min-width: 70px;">
+                                        <i class="bi bi-trash me-1"></i>刪除
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-folder2-open display-1 text-muted mb-3"></i>
+                    <h3 class="text-muted">尚無專案</h3>
+                    <p class="text-muted">點擊右上角的「建立專案」按鈕開始創建您的第一個專案</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+     <!-- 建立專案 Modal -->
+     <div class="modal fade" id="createProjectModal" tabindex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createProjectModalLabel">建立新專案</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                </div>
+                <form action="{{ url_for('main.create_project') }}" method="POST" id="createProjectForm" novalidate>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="organizationName" class="form-label">組織名稱</label>
+                                <input type="text" class="form-control" id="organizationName" name="organizationName" placeholder="輸入組織名稱" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="projectName" class="form-label">專案名稱</label>
+                                <input type="text" class="form-control" id="projectName" name="projectName" placeholder="輸入專案名稱" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="projectActivity" class="form-label">專案活動</label>
+                                <textarea class="form-control" id="projectActivity" name="projectActivity" rows="3" placeholder="描述活動內容"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="projectGoal" class="form-label">專案目標</label>
+                                <textarea class="form-control" id="projectGoal" name="projectGoal" rows="3" placeholder="活動如何實現期望的影響"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="projectAttribute" class="form-label">屬性</label>
+                                <select class="form-select" id="projectAttribute" name="projectAttribute" required>
+                                    <option value="contract">合約 (Contract)</option>
+                                    <option value="funding">資金 (Funding)</option>
+                                    <option value="partOfOrg">組織的一部分 (Part of org)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectStartDate" class="form-label">專案開始日期</label>
+                                <input type="date" class="form-control" id="projectStartDate" name="projectStartDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectEndDate" class="form-label">專案結束日期</label>
+                                <input type="date" class="form-control" id="projectEndDate" name="projectEndDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="analysisStartDate" class="form-label">分析開始日期</label>
+                                <input type="date" class="form-control" id="analysisStartDate" name="analysisStartDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="analysisEndDate" class="form-label">分析結束日期</label>
+                                <input type="date" class="form-control" id="analysisEndDate" name="analysisEndDate" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="analysisNature" class="form-label">分析性質</label>
+                                <select class="form-select" id="analysisNature" name="analysisNature" required>
+                                    <option value="evaluation">評估</option>
+                                    <option value="prediction">預測</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">建立</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<!-- 編輯專案 Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯專案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProjectForm" method="POST"> 
+                <input type="hidden" id="projectId" name="projectId" value="">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="organizationName" class="form-label">組繋名稱</label>
+                            <input type="text" class="form-control" id="organizationName" name="organizationName" placeholder="輸入組織名稱" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="projectName" class="form-label">專案名稱</label>
+                            <input type="text" class="form-control" id="projectName" name="projectName" placeholder="輸入專案名稱" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="projectActivity" class="form-label">專案活動</label>
+                            <textarea class="form-control" id="projectActivity" name="projectActivity" rows="3" placeholder="描述活動內容"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="projectGoal" class="form-label">專案目標</label>
+                            <textarea class="form-control" id="projectGoal" name="projectGoal" rows="3" placeholder="活動如何實現期望的影響"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="projectAttribute" class="form-label">屬性</label>
+                            <select class="form-select" id="projectAttribute" name="projectAttribute" required>
+                                <option value="contract">合約 (Contract)</option>
+                                <option value="funding">資金 (Funding)</option>
+                                <option value="partOfOrg">組織的一部分 (Part of org)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="projectStartDate" class="form-label">專案開始日期</label>
+                            <input type="date" class="form-control" id="projectStartDate" name="projectStartDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="projectEndDate" class="form-label">專案結束日期</label>
+                            <input type="date" class="form-control" id="projectEndDate" name="projectEndDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="analysisStartDate" class="form-label">分析開始日期</label>
+                            <input type="date" class="form-control" id="analysisStartDate" name="analysisStartDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="analysisEndDate" class="form-label">分析結束日期</label>
+                            <input type="date" class="form-control" id="analysisEndDate" name="analysisEndDate" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="analysisNature" class="form-label">分析性質</label>
+                            <select class="form-select" id="analysisNature" name="analysisNature" required>
+                                <option value="evaluation">評估</option>
+                                <option value="prediction">預測</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">退出</button>
+                    <div>
+                        <button type="submit" class="btn btn-success me-2">保存</button>
+                        <a id="nextStepBtn" class="btn btn-primary" style="display: none;">下一步</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+       
+
+    <!-- 使用教學 Modal -->
+    <div class="modal fade" id="tutorialModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">SROI系統使用教學</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-4">
+                        <!-- 步驟 1 -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-1-circle-fill text-primary me-2"></i>
+                                    建立新專案
+                                </h6>
+                                <p class="mb-0">點擊右上角的「建立專案」按鈕，填寫：</p>
+                                <ul class="mt-2">
+                                    <li>組織名稱</li>
+                                    <li>專案名稱</li>
+                                    <li>專案活動與目標</li>
+                                    <li>時間範圍</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 步驟 2 -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-2-circle-fill text-primary me-2"></i>
+                                    添加利害關係人
+                                </h6>
+                                <p class="mb-0">點擊「SROI 資料」按鈕：</p>
+                                <ul class="mt-2">
+                                    <li>識別主要利害關係人</li>
+                                    <li>記錄相關資訊</li>
+                                    <li>設定關係人群組</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 步驟 3 -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-3-circle-fill text-primary me-2"></i>
+                                    輸入投入產出
+                                </h6>
+                                <p class="mb-0">記錄各項數據：</p>
+                                <ul class="mt-2">
+                                    <li>資源投入（金錢/時間）</li>
+                                    <li>活動產出</li>
+                                    <li>影響力相關數據</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 步驟 4 -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-4-circle-fill text-primary me-2"></i>
+                                    查看分析結果
+                                </h6>
+                                <p class="mb-0">使用分析功能：</p>
+                                <ul class="mt-2">
+                                    <li>計算 SROI 比率</li>
+                                    <li>生成分析報告</li>
+                                    <li>檢視視覺化圖表</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 注意事項 -->
+                    <div class="mt-4 p-3 border rounded bg-light">
+                        <h6 class="mb-3">
+                            <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                            注意事項
+                        </h6>
+                        <ul class="mb-0">
+                            <li>所有數據請確保準確性</li>
+                            <li>定期儲存專案進度</li>
+                            <li>可隨時回來修改資料</li>
+                            <li>如有問題可聯繫系統管理員</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加確認刪除的 Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">確認刪除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                確定要刪除這個專案嗎？此操作無法復原。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">確認刪除</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // 初始化專案系統
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const urlParams = new URLSearchParams(window.location.search);
+    let projectToDelete = null;
+
+    // 如果有 openModal 參數，打開建立專案 Modal
+    if (urlParams.get('openModal') === 'create') {
+        const createProjectModal = new bootstrap.Modal(document.getElementById('createProjectModal'));
+        createProjectModal.show();
+    }
+
+    // 監聽 Modal 關閉事件
+    document.getElementById('createProjectModal').addEventListener('hidden.bs.modal', function () {
+        // 移除殘留的 modal-backdrop
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.remove();
+        });
+    });
+
+    // 刪除按鈕的事件處理
+    document.querySelectorAll('.delete-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            projectToDelete = this.dataset.projectId;
+            deleteModal.show();
+        });
+    });
+
+    // 確認刪除按鈕的事件處理
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (projectToDelete) {
+            showAlert('正在刪除專案...', 'info');
+            const deleteUrl = `/delete_project/${projectToDelete}`;
+            window.location.href = deleteUrl;
+            deleteModal.hide();
+        }
+    });
+
+    // 顯示提示消息的函數
+    function showAlert(message, type, duration = 3000) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.role = 'alert';
+        alert.innerHTML = message + `
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        const alertContainer = document.getElementById('alertContainer');
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+            setTimeout(() => alert.remove(), 150);
+        }, duration);
+    }
+
+    // 處理 Flash 訊息
+    const flashDiv = document.getElementById('flashMessages');
+    const messages = flashDiv.getElementsByTagName('div');
+    
+    for (let messageDiv of messages) {
+        const message = messageDiv.getAttribute('data-message');
+        const category = messageDiv.getAttribute('data-category');
+        if (message && category) {
+            showAlert(message, category);
+        }
+    }
+
+    // 當點擊編輯按鈕時
+    document.querySelectorAll('.edit-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const projectId = this.dataset.projectId;
+            document.getElementById('projectId').value = projectId;
+            
+            // 更新下一步按鈕的連結
+            const nextStepBtn = document.getElementById('nextStepBtn');
+            nextStepBtn.href = `/stakeholder_form/${projectId}`;
+            nextStepBtn.style.display = 'inline-block';
+        });
+    });
+
+    // 篩選功能
+    const filterButtons = document.querySelectorAll('.btn-group[data-filter] button');
+    const viewSwitchButtons = document.querySelectorAll('.view-switch .btn');
+
+    // 篩選按鈕點擊事件
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 移除所有按鈕的 active 狀態
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // 為當前按鈕添加 active 狀態
+            this.classList.add('active');
+            
+            // 取得篩選條件
+            const filter = this.dataset.filter;
+            
+            // 根據當前視圖篩選專案
+            const currentView = document.querySelector('.view-switch .btn.active').dataset.view;
+            const projectItems = document.querySelectorAll(`.${currentView}-view-item`);
+            
+            projectItems.forEach(item => {
+                const status = item.querySelector('.project-badge, .badge').textContent.trim();
+                
+                switch(filter) {
+                    case 'all':
+                        item.style.display = '';
+                        break;
+                    case 'completed':
+                        if (status !== '未評分') {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                        break;
+                    case 'in-progress':
+                        if (status === '未評分') {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                        break;
+                }
+            });
+        });
+    });
+
+    // 視圖切換按鈕點擊事件
+    viewSwitchButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 移除所有按鈕的 active 狀態
+            viewSwitchButtons.forEach(btn => btn.classList.remove('active'));
+            // 為當前按鈕添加 active 狀態
+            this.classList.add('active');
+            
+            // 取得視圖類型
+            const view = this.dataset.view;
+            
+            // 切換視圖
+            document.getElementById('projectsContainer').className = `${view}-view`;
+            
+            // 重新應用當前篩選條件
+            const activeFilter = document.querySelector('.btn-group[data-filter] .active');
+            if (activeFilter) {
+                activeFilter.click();
+            }
+        });
+    });
+    });
+    </script>
+
+</body>
+</html>

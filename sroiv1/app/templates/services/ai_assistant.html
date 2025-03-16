@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* 新增主題色變數 */
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --light-bg: #f8fafc;
+            --dark-bg: #1e293b;
+        }
+
+        /* 確保 AI 助理的樣式不會影響其他元素 */
+        .ai-assistant-container {
+            position: fixed !important;
+            right: 20px !important;
+            bottom: 20px !important;
+            z-index: 9999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            gap: 10px !important;
+            cursor: grab;
+            transition: all 0.3s ease;
+        }
+        .ai-assistant-btn {
+            width: 60px !important;
+            height: 60px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #0d6efd, #0a4bb5) !important;
+            color: #fff !important;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3) !important;
+            cursor: pointer !important;
+            user-select: none !important;
+            position: relative !important;
+            z-index: 10000 !important;
+            border: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.3s ease !important;
+        }
+        .ai-assistant-btn:hover {
+            transform: scale(1.05) !important;
+            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4) !important;
+            background: linear-gradient(135deg, #0a58ca, #084298) !important;
+        }
+        .ai-assistant-btn:active {
+            transform: scale(0.95) !important;
+        }
+        .ai-assistant-btn i {
+            font-size: 24px !important;
+            transition: transform 0.3s ease !important;
+        }
+        .ai-assistant-btn:hover i {
+            transform: scale(1.1) !important;
+        }
+        .ai-assistant-btn.pulse {
+            animation: pulse 2s infinite;
+        }
+        .ai-assistant-btn .bi-robot {
+            position: relative !important;
+            top: 1px !important;
+        }
+        .ai-assistant-dialog {
+            display: none;
+            width: 400px;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            position: absolute;
+            bottom: 70px;    /* 從 Icon 上方 70px 處顯示 */
+            right: 0;
+            z-index: 9998;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .ai-assistant-header {
+            padding: 10px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+        }
+        .ai-assistant-body {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 600px !important;
+            padding: 10px !important;
+            overflow: hidden !important;
+        }
+        /* 確保 AI 助理的樣式不會影響 resultsForm.html 的表格 */
+        .ai-assistant-body table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .ai-assistant-body table th,
+        .ai-assistant-body table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .ai-assistant-body table th {
+            background-color: #f8f9fa;
+        }
+        /* 新增對話聊天泡泡樣式 */
+        .ai-chat-container {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+            padding: 10px !important;
+            margin-top: auto !important; /* 確保新訊息從底部開始 */
+        }
+        .ai-chat-message {
+            padding: 8px 12px;
+            border-radius: 16px;
+            max-width: 80%;
+            word-break: break-word;
+            position: relative;
+        }
+        .ai-chat-message.user {
+            background-color: #d1e7dd;
+            align-self: flex-end;
+        }
+        .ai-chat-message.bot {
+            background-color: #f8f9fa;
+            align-self: flex-start;
+        }
+        #aiChatArea {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        #aiInputSection {
+            position: sticky !important;
+            bottom: 0 !important;
+            background-color: white !important;
+            padding: 10px !important;
+            border-top: 1px solid #dee2e6 !important;
+            margin-top: auto !important;
+        }
+        /* 更新載入動畫樣式 */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border-radius: 16px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #666;
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: pulse 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+            }
+            50% {
+                box-shadow: 0 4px 25px rgba(13, 110, 253, 0.5);
+            }
+            100% {
+                box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+            }
+        }
+
+        /* 訊息時間戳記樣式 */
+        .message-timestamp {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 2px 0;
+        }
+        
+        .user .message-timestamp {
+            text-align: right;
+        }
+        
+        .bot .message-timestamp {
+            text-align: left;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+        
+        .ai-chat-message:hover .copy-btn {
+            opacity: 1;
+        }
+
+        /* 新增輸入區域樣式 */
+        .ai-input-wrapper {
+            position: relative !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+
+        .ai-input-area {
+            position: relative !important;
+            display: flex !important;
+            gap: 8px !important;
+            align-items: flex-end !important;
+        }
+
+        #aiPrompt {
+            resize: none !important;
+            border-radius: 20px !important;
+            padding: 10px 15px !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            border: 1px solid #dee2e6 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        #aiPrompt:focus {
+            border-color: #0d6efd !important;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+            outline: none !important;
+        }
+
+        /* 修改發送按鈕樣式 */
+        .ai-send-btn {
+            height: 40px !important;
+            min-width: 40px !important;
+            border-radius: 20px !important;
+            background: linear-gradient(135deg, #0d6efd, #0a4bb5) !important;
+            color: white !important;
+            border: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            padding: 0 15px !important;
+        }
+
+        .ai-send-btn:hover {
+            background: linear-gradient(135deg, #0a58ca, #084298) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3) !important;
+        }
+
+        .ai-send-btn:active {
+            transform: translateY(1px) !important;
+        }
+
+        .ai-send-btn i {
+            font-size: 18px !important;
+        }
+
+        /* 新增快捷鍵提示樣式 */
+        .shortcut-hint {
+            position: absolute !important;
+            right: 10px !important;
+            bottom: 10px !important;
+            font-size: 12px !important;
+            color: #6c757d !important;
+            pointer-events: none !important;
+            user-select: none !important;
+        }
+
+        /* 手機版樣式優化 */
+        @media (max-width: 768px) {
+            .ai-assistant-container {
+                right: 15px !important;
+                bottom: max(15px, env(safe-area-inset-bottom)) !important;
+            }
+
+            .ai-assistant-dialog {
+                width: 300px !important;  /* 改為固定寬度 */
+                max-width: 90vw !important;  /* 最大寬度不超過螢幕90% */
+                height: 400px !important;  /* 改為較小的固定高度 */
+                position: fixed !important;
+                bottom: 80px !important;  /* 距離底部的距離 */
+                right: 10px !important;
+                border-radius: 12px !important;  /* 保持圓角 */
+                margin: 0 !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+            }
+
+            .ai-assistant-body {
+                height: calc(400px - 56px) !important;  /* 扣除標題欄高度 */
+                padding: 8px !important;
+            }
+
+            /* 優化標題欄 */
+            .ai-assistant-header {
+                padding: 8px 12px !important;
+                background: linear-gradient(135deg, #0d6efd, #0a4bb5) !important;
+                border-bottom: none !important;
+            }
+
+            .ai-assistant-header h5 {
+                font-size: 14px !important;
+                color: white !important;
+            }
+
+            .ai-assistant-header .btn-close {
+                filter: brightness(0) invert(1) !important;  /* 將關閉按鈕變為白色 */
+            }
+
+            /* 優化訊息泡泡 */
+            .ai-chat-message {
+                max-width: 85% !important;
+                padding: 6px 10px !important;
+                font-size: 13px !important;
+                margin: 3px 0 !important;
+            }
+
+            /* 優化輸入區域 */
+            #aiInputSection {
+                padding: 8px !important;
+            }
+
+            #aiPrompt {
+                font-size: 13px !important;
+                padding: 6px 10px !important;
+                max-height: 80px !important;
+            }
+
+            .ai-send-btn {
+                height: 32px !important;
+                min-width: 32px !important;
+                padding: 0 10px !important;
+            }
+
+            /* 優化初始建議區域 */
+            #aiInitialSuggestions {
+                font-size: 12px !important;
+                padding: 8px !important;
+            }
+
+            #aiInitialSuggestions ul {
+                padding-left: 16px !important;
+                margin-bottom: 8px !important;
+            }
+
+            /* 優化時間戳記 */
+            .message-timestamp {
+                font-size: 9px !important;
+                margin: 1px 0 !important;
+                opacity: 0.7 !important;
+            }
+
+            /* 優化載入動畫 */
+            .typing-indicator {
+                padding: 4px 8px !important;
+            }
+
+            .typing-dot {
+                width: 4px !important;
+                height: 4px !important;
+            }
+        }
+
+        /* 新增滑入動畫 */
+        @media (max-width: 768px) {
+            .ai-assistant-dialog {
+                transform: translateX(120%) !important;
+                transition: transform 0.3s ease-out !important;
+                opacity: 0 !important;
+            }
+
+            .ai-assistant-dialog.show {
+                transform: translateX(0) !important;
+                opacity: 1 !important;
+            }
+        }
+
+        /* 新增主題切換按鈕 */
+        .theme-toggle {
+            padding: 4px 8px !important;
+            border-radius: 4px !important;
+            background: transparent !important;
+            color: var(--secondary-color) !important;
+            border: 1px solid currentColor !important;
+            margin-right: 8px !important;
+        }
+
+        /* 深色主題樣式 */
+        .dark-theme {
+            background: var(--dark-bg) !important;
+            color: #e2e8f0 !important;
+        }
+
+        .dark-theme .ai-chat-message.user {
+            background-color: #3b82f6 !important;
+            color: white !important;
+        }
+
+        .dark-theme .ai-chat-message.bot {
+            background-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+
+        /* 移除這些樣式 */
+        .emoji-picker,
+        .emoji-btn,
+        .emoji-btn:hover,
+        .dark-theme .emoji-picker,
+        .dark-theme .emoji-btn:hover {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="ai-assistant-container">
+        <!-- 懸浮按鈕 -->
+        <button class="btn btn-primary ai-assistant-btn pulse" onclick="toggleAIAssistant()" title="AI 顧問助理">
+            <i class="bi bi-robot"></i>
+        </button>
+        
+        <!-- 懸浮對話框 -->
+        <div class="ai-assistant-dialog">
+            <div class="ai-assistant-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-robot me-2"></i>AI 分析助理</h5>
+                <div class="d-flex align-items-center">
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i class="bi bi-moon"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger me-2" onclick="clearChat()">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-close" onclick="toggleAIAssistant()"></button>
+                </div>
+            </div>
+            <div class="ai-assistant-body">
+                <div id="aiInitialSuggestions">
+                    <p>以下是一些填寫成果表的建議：</p>
+                    <ul>
+                        <li>確保每個成果都與專案目標相關</li>
+                        <li>使用具體的指標來衡量成果</li>
+                        <li>描述成果時，盡量量化影響</li>
+                        <li>考慮短期和長期的成果</li>
+                    </ul>
+                </div>
+                <div id="aiChatArea">
+                    <div id="aiResponse" class="ai-chat-container rounded"></div>
+                </div>
+                <div id="aiInputSection">
+                    <div class="ai-input-wrapper">
+                        <div class="ai-input-area">
+                            <textarea class="form-control" id="aiPrompt" rows="2" placeholder="有任何問題嗎？按 Ctrl + Enter 快速發送"></textarea>
+                            <button class="ai-send-btn" onclick="askAI()" title="發送訊息 (Ctrl + Enter)">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script defer>
+    // 修正拖曳功能
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('AI 助理拖曳功能初始化');
+        const container = document.querySelector('.ai-assistant-container');
+        const btn = document.querySelector('.ai-assistant-btn');
+        const dialog = document.querySelector('.ai-assistant-dialog');
+
+        if (!container || !btn || !dialog) {
+            console.error('無法找到 AI 助理元素');
+            return;
+        }
+
+        console.log('找到 AI 助理元素:', { container, btn, dialog });
+
+        // 開始拖曳
+        btn.addEventListener('mousedown', function(e) {
+            console.log('開始拖曳', e);
+            isDragging = true;
+
+            // 取得目前容器座標（以視窗左上角為基準）
+            const rect = container.getBoundingClientRect();
+            // 設定 inline style 的值並加上 important，以確保覆蓋 CSS 中的 !important
+            container.style.setProperty('left', rect.left + 'px', 'important');
+            container.style.setProperty('top', rect.top + 'px', 'important');
+            container.style.setProperty('right', 'auto', 'important');
+            container.style.setProperty('bottom', 'auto', 'important');
+
+            // 重新計算拖曳時的偏移量
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            startDrag(container);
+        });
+
+        // 拖曳中
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                console.log('拖曳中', e);
+                const newX = e.clientX - offsetX;
+                const newY = e.clientY - offsetY;
+                drag(container, { left: newX, top: newY });
+            }
+        });
+
+        // 結束拖曳
+        document.addEventListener('mouseup', function() {
+            console.log('結束拖曳');
+            isDragging = false;
+            endDrag(container);
+        });
+
+        // 開始拖曳
+        function startDrag(element) {
+            element.style.transition = 'none'; // 移除過渡效果
+            element.style.cursor = 'grabbing';
+        }
+
+        // 拖曳到指定位置
+        function drag(element, newLoc) {
+            const maxX = window.innerWidth - element.offsetWidth - 10; // 預留 10px 右側緩衝
+            const maxY = window.innerHeight - element.offsetHeight - 10; // 預留 10px 下側緩衝
+            
+            // 調整邊界，確保整個 Icon 與對話框均位於視窗之內
+            element.style.setProperty('left', `${Math.min(Math.max(10, newLoc.left), maxX)}px`, 'important');
+            element.style.setProperty('top', `${Math.min(Math.max(10, newLoc.top), maxY)}px`, 'important');
+        }
+
+        // 結束拖曳
+        function endDrag(element) {
+            element.style.cursor = 'grab';
+            element.style.transition = 'all 0.3s ease'; // 恢復過渡效果
+        }
+    });
+
+    // 修改切換對話框顯示的函數
+    function toggleAIAssistant() {
+        const dialog = document.querySelector('.ai-assistant-dialog');
+        const btn = document.querySelector('.ai-assistant-btn');
+        const isMobile = window.innerWidth <= 768;
+        
+        if (dialog.style.display === 'block') {
+            if (isMobile) {
+                dialog.classList.remove('show');
+                setTimeout(() => {
+                    dialog.style.display = 'none';
+                }, 300);
+            } else {
+            dialog.style.display = 'none';
+            }
+            btn.classList.add('pulse');
+        } else {
+            dialog.style.display = 'block';
+            if (isMobile) {
+                // 強制重繪
+                dialog.offsetHeight;
+                dialog.classList.add('show');
+            }
+            btn.classList.remove('pulse');
+        }
+    }
+
+    // 頁面載入時添加脈動效果
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.querySelector('.ai-assistant-btn');
+        btn.classList.add('pulse');
+    });
+
+    function formatTimestamp() {
+        const now = new Date();
+        return now.toLocaleTimeString('zh-TW', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    }
+
+    function createTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.classList.add('typing-indicator');
+        indicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        return indicator;
+    }
+
+    // 新增結合逐字淡入和滾輪顯示的函式
+    function fadeInScrollText(text, elementId, delay = 50) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.error(`元素 ${elementId} 不存在`);
+            return;
+        }
+        element.innerHTML = '';  // 清除先前內容
+        const lines = text.split('<br>');  // 將文字分割成多行
+        let i = 0;
+        function fadeInScroll() {
+            if (i < lines.length) {
+                const line = document.createElement('div');
+                line.textContent = lines[i];
+                element.appendChild(line);
+                i++;
+                // 逐字淡入效果
+                fadeInText(line.textContent, line.id, delay);
+                // 自動捲動到最新訊息
+                element.scrollTop = element.scrollHeight;
+                setTimeout(fadeInScroll, delay * line.textContent.length);
+            }
+        }
+        fadeInScroll();
+    }
+
+    function askAI(retryCount = 0) {
+        const promptInput = document.getElementById('aiPrompt');
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+            alert('請輸入問題');
+            return;
+        }
+
+        const initialSuggestions = document.getElementById('aiInitialSuggestions');
+        if (initialSuggestions) {
+            initialSuggestions.style.display = 'none';
+        }
+
+        const chatContainer = document.getElementById('aiResponse');
+
+        // 建立使用者訊息
+        const userMessage = document.createElement('div');
+        userMessage.classList.add('ai-chat-message', 'user');
+        userMessage.textContent = prompt;
+        
+        // 加入時間戳記
+        const userTimestamp = document.createElement('div');
+        userTimestamp.classList.add('message-timestamp');
+        userTimestamp.textContent = formatTimestamp();
+        userMessage.appendChild(userTimestamp);
+        
+        chatContainer.appendChild(userMessage);
+        
+        // 儲存使用者訊息
+        saveChatHistory(prompt, true);
+
+        // 清空輸入框
+        promptInput.value = '';
+
+        // 建立 AI 回應訊息（先顯示載入中）
+        const botMessage = document.createElement('div');
+        botMessage.classList.add('ai-chat-message', 'bot');
+        botMessage.id = 'aiResponseMessage'; // 為 botMessage 添加 ID
+        
+        // 加入載入動畫
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'typing-indicator';
+        loadingDiv.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        botMessage.appendChild(loadingDiv);
+        
+        chatContainer.appendChild(botMessage);
+
+        // 自動捲動到最新訊息
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // 發送請求到後端
+        fetch('/api/ai/assistant', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                context: 'results_form',
+                project_id: '{{ project_id }}'
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('網路回應不正常');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // 移除載入動畫
+            botMessage.innerHTML = '';
+            
+            // 加入 AI 回應內容
+            const responseText = document.createElement('div');
+            // 移除 ** 標記，並將 * 替換為 •
+            const cleanedResponse = data.response
+                .replace(/\*\*/g, '') // 移除 **
+                .replace(/\*/g, '•'); // 將 * 替換為 •
+            // 使用 fadeInScrollText 函式逐行顯示，並保留換行效果
+            fadeInScrollText(cleanedResponse.replace(/\n/g, '<br>'), botMessage.id);
+            
+            // 加入時間戳記
+            const botTimestamp = document.createElement('div');
+            botTimestamp.classList.add('message-timestamp');
+            botTimestamp.textContent = formatTimestamp();
+            botMessage.appendChild(botTimestamp);
+            
+            // 儲存 AI 回應
+            saveChatHistory(data.response, false);
+            
+            // 自動捲動到最新訊息
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+            if (retryCount < 2) {
+                console.log(`重試第 ${retryCount + 1} 次`);
+                setTimeout(() => {
+                    askAI(retryCount + 1);
+                }, 1000 * (retryCount + 1));
+            } else {
+                botMessage.innerHTML = '';
+                botMessage.textContent = `發生錯誤: ${error.message}`;
+                botMessage.classList.add('text-danger');
+                
+                // 加入重試按鈕
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'btn btn-sm btn-outline-danger mt-2';
+                retryBtn.textContent = '重試';
+                retryBtn.onclick = () => {
+                    chatContainer.removeChild(botMessage);
+                    askAI();
+                };
+                botMessage.appendChild(retryBtn);
+            }
+        });
+    }
+
+    // 新增快捷鍵處理
+    document.addEventListener('keydown', function(e) {
+        const promptInput = document.getElementById('aiPrompt');
+        
+        // 檢查對話框是否顯示
+        const dialog = document.querySelector('.ai-assistant-dialog');
+        if (dialog.style.display !== 'block') return;
+        
+        // Ctrl/Cmd + Enter 發送訊息
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            askAI();
+        }
+        
+        // Esc 關閉對話框
+        if (e.key === 'Escape') {
+            toggleAIAssistant();
+        }
+    });
+
+    // 儲存聊天記錄
+    function saveChatHistory(message, isUser) {
+        const chatHistory = JSON.parse(localStorage.getItem('aiChatHistory') || '[]');
+        chatHistory.push({
+            message: message,
+            timestamp: new Date().toISOString(),
+            isUser: isUser
+        });
+        // 只保留最近 50 則訊息
+        if (chatHistory.length > 50) {
+            chatHistory.shift();
+        }
+        localStorage.setItem('aiChatHistory', JSON.stringify(chatHistory));
+    }
+
+    // 載入聊天記錄
+    function loadChatHistory() {
+        const chatHistory = JSON.parse(localStorage.getItem('aiChatHistory') || '[]');
+        const chatContainer = document.getElementById('aiResponse');
+        
+        chatHistory.forEach(item => {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('ai-chat-message', item.isUser ? 'user' : 'bot');
+            messageDiv.textContent = item.message;
+            
+            const timestamp = document.createElement('div');
+            timestamp.classList.add('message-timestamp');
+            timestamp.textContent = new Date(item.timestamp).toLocaleTimeString('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            messageDiv.appendChild(timestamp);
+            chatContainer.appendChild(messageDiv);
+        });
+    }
+
+    // 在頁面載入時讀取歷史記錄
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChatHistory();
+    });
+
+    // 修改清除對話功能
+    function clearChat() {
+        if (confirm('確定要清除所有對話嗎？')) {
+            // 清除顯示的對話內容
+            const chatContainer = document.getElementById('aiResponse');
+            chatContainer.innerHTML = '';
+            
+            // 清除本地儲存的對話記錄
+            localStorage.removeItem('aiChatHistory');
+            
+            // 重新顯示初始建議
+            const initialSuggestions = document.getElementById('aiInitialSuggestions');
+            if (initialSuggestions) {
+                initialSuggestions.style.display = 'block';
+            }
+        }
+    }
+
+    function createMessageElement(text, isUser) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('ai-chat-message', isUser ? 'user' : 'bot');
+        messageDiv.textContent = text;
+        
+        // 新增複製按鈕
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-sm btn-light copy-btn';
+        copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.innerHTML = '<i class="bi bi-check"></i>';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                }, 2000);
+            });
+        };
+        
+        messageDiv.appendChild(copyBtn);
+        return messageDiv;
+    }
+
+    // 新增自動調整輸入框高度
+    const promptInput = document.getElementById('aiPrompt');
+    if (promptInput) {
+        promptInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+
+    // 新增手機版觸控支援
+    document.addEventListener('DOMContentLoaded', function() {
+        // 防止手機上的滾動穿透
+        const dialog = document.querySelector('.ai-assistant-dialog');
+        dialog.addEventListener('touchmove', function(e) {
+            e.stopPropagation();
+        });
+
+        // 改善手機版輸入體驗
+        const promptInput = document.getElementById('aiPrompt');
+        promptInput.addEventListener('focus', function() {
+            // 當輸入框獲得焦點時，延遲捲動以避免鍵盤彈出時的畫面跳動
+            setTimeout(() => {
+                this.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        });
+
+        // 檢測設備類型並調整互動方式
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            // 在手機版上使用觸控事件
+            const container = document.querySelector('.ai-assistant-container');
+            let touchStartX, touchStartY;
+            let initialX, initialY;
+
+            container.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                initialX = container.offsetLeft;
+                initialY = container.offsetTop;
+            });
+
+            container.addEventListener('touchmove', function(e) {
+                if (!isDragging) return;
+                
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = touchX - touchStartX;
+                const deltaY = touchY - touchStartY;
+
+                const newX = initialX + deltaX;
+                const newY = initialY + deltaY;
+
+                // 確保不會超出螢幕邊界
+                const maxX = window.innerWidth - container.offsetWidth;
+                const maxY = window.innerHeight - container.offsetHeight;
+
+                container.style.left = `${Math.min(Math.max(0, newX), maxX)}px`;
+                container.style.top = `${Math.min(Math.max(0, newY), maxY)}px`;
+            });
+
+            container.addEventListener('touchend', function() {
+                isDragging = false;
+            });
+        }
+    });
+
+    // 新增手機版返回手勢支援
+    document.addEventListener('DOMContentLoaded', function() {
+        let touchStartY = 0;
+        let touchMoveY = 0;
+        
+        const dialog = document.querySelector('.ai-assistant-dialog');
+        const header = document.querySelector('.ai-assistant-header');
+        
+        header.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        header.addEventListener('touchmove', function(e) {
+            touchMoveY = e.touches[0].clientY;
+            const deltaY = touchMoveY - touchStartY;
+            
+            if (deltaY > 0) {
+                dialog.style.transform = `translateY(${deltaY}px)`;
+            }
+        });
+        
+        header.addEventListener('touchend', function() {
+            if (touchMoveY - touchStartY > 100) {
+                toggleAIAssistant();
+            } else {
+                dialog.style.transform = '';
+            }
+        });
+    });
+
+    // 新增深色主題切換功能
+    function toggleTheme() {
+        const dialog = document.querySelector('.ai-assistant-dialog');
+        dialog.classList.toggle('dark-theme');
+        const themeBtn = document.querySelector('.theme-toggle i');
+        if (dialog.classList.contains('dark-theme')) {
+            themeBtn.classList.replace('bi-moon', 'bi-sun');
+        } else {
+            themeBtn.classList.replace('bi-sun', 'bi-moon');
+        }
+    }
+    
+    </script>
+    
+</body>
+</html> 

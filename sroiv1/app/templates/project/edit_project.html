@@ -1,0 +1,47 @@
+<div class="mb-3">
+    <label class="form-label">AI 輔助</label>
+    <div class="input-group">
+        <select class="form-select" id="aiModelSelect">
+            <option value="">選擇 AI 模型...</option>
+            {% for model in ai_models %}
+                {% if model.is_active %}
+                <option value="{{ model.id }}">{{ model.name }} ({{ model.model_type }})</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <button class="btn btn-outline-primary" type="button" onclick="generateWithAI()">
+            <i class="bi bi-robot"></i> AI 生成
+        </button>
+    </div>
+</div>
+
+<script>
+function generateWithAI() {
+    const modelId = document.getElementById('aiModelSelect').value;
+    const inputText = document.getElementById('project_description').value;
+    
+    if (!modelId) {
+        alert('請選擇 AI 模型');
+        return;
+    }
+    
+    fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model_id: modelId,
+            input_text: inputText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.result) {
+            document.getElementById('project_description').value = data.result;
+        } else {
+            alert('生成失敗：' + data.error);
+        }
+    });
+}
+</script> 

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h3 class="mb-0">影響力因子設定 (Step 4)</h3>
+                <button type="button" class="btn btn-outline-primary btn-sm guide-button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#guideCollapse" 
+                        aria-expanded="false">
+                    <i class="bi bi-info-circle me-1"></i>填寫指引
+                </button>
+            </div>
+            <div class="guide-collapse" id="guideCollapse">
+                <div class="guide-content">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-primary mb-3">
+                                <i class="bi bi-lightbulb me-2"></i>評估指引
+                            </h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>無謂因子 (0-100%)</strong>：
+                                    <br>若無此專案，成果仍會發生的比例
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>移轉因子 (0-100%)</strong>：
+                                    <br>成果轉移到其他群體的比例
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>歸因因子 (0-100%)</strong>：
+                                    <br>其他組織或因素貢獻的比例
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>衰減因子 (0-100%)</strong>：
+                                    <br>成果效益每年衰減的比例
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('main.impact_factors', project_id=project_id) }}">
+            {{ form.csrf_token }}
+            <div class="table-responsive p-3">
+                <table class="table table-bordered table-hover table-impact-factors">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 150px;">利害關係者</th>
+                            <th style="min-width: 200px;">成果</th>
+                            <th style="min-width: 150px;">指標名稱</th>
+                            <th style="min-width: 100px;">無謂因子</th>
+                            <th style="min-width: 100px;">移轉因子</th>
+                            <th style="min-width: 100px;">歸因因子</th>
+                            <th style="min-width: 100px;">衰減因子</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr class="impact-factor-row">
+                            <td class="readonly-group">
+                                <div class="mobile-label d-md-none">利害關係者</div>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{{ result.stakeholder_name }}" readonly>
+                                </div>
+                            </td>
+                            <td class="readonly-group">
+                                <div class="mobile-label d-md-none">成果</div>
+                                <div class="position-relative">
+                                    <textarea class="form-control readonly-field" rows="2" readonly>{{ result.result_description }}</textarea>
+                                </div>
+                            </td>
+                            <td class="readonly-group">
+                                <div class="mobile-label d-md-none">指標名稱</div>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{{ result.indicator_name }}" readonly>
+                                    <input type="hidden" class="scale-population" value="{{ result.scale_population }}">
+                                    <input type="hidden" class="weight" value="{{ result.weight }}">
+                                </div>
+                            </td>
+                            <td class="editable-group">
+                                <div class="mobile-label d-md-none">無謂因子 (%)</div>
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <input type="number" class="form-control factor-input" 
+                                           name="deadweight_{{ result.id }}" min="0" max="100" step="1"
+                                           style="width: 80px; text-align: center;"
+                                           value="{{ result.impact_factors[0].deadweight }}"
+                                           required>
+                                    <span>%</span>
+                                </div>
+                            </td>
+                            <td class="editable-group">
+                                <div class="mobile-label d-md-none">移轉因子 (%)</div>
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <input type="number" class="form-control factor-input" 
+                                           name="displacement_{{ result.id }}" min="0" max="100" step="1"
+                                           style="width: 80px; text-align: center;"
+                                           value="{{ result.impact_factors[0].displacement }}"
+                                           required>
+                                    <span>%</span>
+                                </div>
+                            </td>
+                            <td class="editable-group">
+                                <div class="mobile-label d-md-none">歸因因子 (%)</div>
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <input type="number" class="form-control factor-input" 
+                                           name="attribution_{{ result.id }}" min="0" max="100" step="1"
+                                           style="width: 80px; text-align: center;"
+                                           value="{{ result.impact_factors[0].attribution }}"
+                                           required>
+                                    <span>%</span>
+                                </div>
+                            </td>
+                            <td class="editable-group">
+                                <div class="mobile-label d-md-none">衰減因子 (%)</div>
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                    <input type="number" class="form-control factor-input" 
+                                           name="drop_off_{{ result.id }}" min="0" max="100" step="1"
+                                           style="width: 80px; text-align: center;"
+                                           value="{{ result.impact_factors[0].drop_off }}"
+                                           required>
+                                    <span>%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 gap-2">
+                <a href="{{ url_for('main.result_indicators', project_id=project_id) }}" 
+                   class="btn btn-outline-primary w-100 w-md-auto mb-2 mb-md-0">
+                    <i class="bi bi-arrow-left-circle me-2"></i>返回
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="save" class="btn btn-primary w-100 w-md-auto">
+                        <i class="bi bi-save me-2"></i>儲存
+                    </button>
+                    <button type="submit" name="action" value="analyze" class="btn btn-success w-100 w-md-auto">
+                        <i class="bi bi-graph-up me-2"></i>查看分析報告
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化所有 popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl)
+    });
+
+    // 監聽自定義輸入
+    document.querySelectorAll('.factor-input').forEach(input => {
+        input.addEventListener('input', function() {
+            // 確保輸入值在有效範圍內
+            if (this.value > 100) this.value = 100;
+            if (this.value < 0) this.value = 0;
+        });
+    });
+
+    // 表單提交前驗證
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const inputs = document.querySelectorAll('.factor-input');
+        let isValid = true;
+
+        inputs.forEach(input => {
+            const value = parseFloat(input.value);
+            if (isNaN(value) || value < 0 || value > 100) {
+                isValid = false;
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            showAlert('請確保所有因子的數值都在0-100%之間', 'danger');
+        }
+
+        if (isValid) {
+            const formData = new FormData(this);
+            console.log('Form data:', Object.fromEntries(formData));
+        }
+    });
+});
+</script>
+{% endblock %} 

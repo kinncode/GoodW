@@ -1,0 +1,294 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}用戶管理{% endblock %}
+
+{% block page_title %}用戶管理{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary">新增帳號</a>
+    <button class="btn btn-outline-secondary" onclick="exportUserList()">匯出用戶列表</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>用戶名稱</th>
+                        <th>Email</th>
+                        <th>角色</th>
+                        <th>狀態</th>
+                        <th>創建時間</th>
+                        <th>最後登入</th>
+                        <th>到期日</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>
+                            {% if user.is_active %}
+                                {% if user.locked_until and user.locked_until > now %}
+                                    <span class="badge bg-warning">已鎖定</span>
+                                {% elif user.is_account_expired() %}
+                                    <span class="badge bg-danger">帳號過期</span>
+                                {% elif user.is_password_expired() %}
+                                    <span class="badge bg-warning">密碼過期</span>
+                                {% else %}
+                                    <span class="badge bg-success">啟用</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-danger">停用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '從未登入' }}</td>
+                        <td>
+                            {% if user.account_expires %}
+                                {% if user.account_expires < now %}
+                                    <span class="text-danger">已過期</span>
+                                {% else %}
+                                    {{ user.account_expires.strftime('%Y-%m-%d') }}
+                                {% endif %}
+                            {% else %}
+                                永久有效
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editUser('{{ user.id }}')">編輯</button>
+                                <button class="btn btn-sm btn-outline-warning" 
+                                        onclick="resetPassword('{{ user.id }}')">重設密碼</button>
+                                {% if user.is_active %}
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deactivateUser('{{ user.id }}')">停用</button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            onclick="activateUser('{{ user.id }}')">啟用</button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="deleteUser('{{ user.id }}')">刪除</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯用戶彈窗 -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯用戶</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <div class="mb-3">
+                        <label class="form-label">帳號到期日</label>
+                        <input type="date" class="form-control" name="account_expires">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密碼到期日</label>
+                        <input type="date" class="form-control" name="password_expires">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">角色</label>
+                        <select class="form-select" name="role">
+                            <option value="user">一般用戶</option>
+                            <option value="admin">管理員</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserChanges()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 用戶管理相關的 JavaScript 函數
+function editUser(userId) {
+    // 獲取用戶資料
+    fetch(`/admin/edit_user/${userId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('獲取用戶資料失敗');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // 填充表單
+            const form = document.getElementById('editUserForm');
+            form.querySelector('input[name="account_expires"]').value = data.account_expires || '';
+            form.querySelector('input[name="password_expires"]').value = data.password_expires || '';
+            form.querySelector('select[name="role"]').value = data.role;
+            
+            // 保存用戶ID供後續使用
+            form.dataset.userId = userId;
+            
+            // 顯示編輯視窗
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('獲取用戶資料失敗');
+        });
+}
+
+function resetPassword(userId) {
+    if (confirm('確定要重設該用戶的密碼嗎？')) {
+        fetch(`/admin/reset-password/${userId}`, {
+            method: 'POST'
+        }).then(response => {
+            if (response.ok) {
+                alert('密碼已重設，新密碼已發送至用戶信箱');
+            }
+        });
+    }
+}
+
+function deactivateUser(userId) {
+    if (confirm('確定要停用該用戶嗎？')) {
+        fetch(`/admin/deactivate-user/${userId}`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || '停用用戶失敗');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message || '停用用戶時發生錯誤');
+        });
+    }
+}
+
+function activateUser(userId) {
+    fetch(`/admin/activate-user/${userId}`, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || '啟用用戶失敗');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || '啟用用戶時發生錯誤');
+    });
+}
+
+function exportUserList() {
+    window.location.href = '/admin/export-users';
+}
+
+function deleteUser(userId) {
+    if (confirm('確定要刪除該用戶嗎？此操作無法復原。')) {
+        fetch(`/admin/delete_user/${userId}`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || '刪除用戶失敗');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message || '刪除用戶時發生錯誤');
+        });
+    }
+}
+
+function saveUserChanges() {
+    const form = document.getElementById('editUserForm');
+    const userId = form.dataset.userId;
+    const formData = new FormData(form);
+    
+    fetch(`/admin/edit_user/${userId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || '更新失敗');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || '更新用戶資料時發生錯誤');
+    });
+}
+</script>
+{% endblock %}

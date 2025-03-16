@@ -1,0 +1,44 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}專案總覽{% endblock %}
+
+{% block page_title %}專案總覽{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>專案名稱</th>
+                        <th>組織名稱</th>
+                        <th>擁有者</th>
+                        <th>建立時間</th>
+                        <th>專案屬性</th>
+                        <th>分析性質</th>
+                        <th>SROI 分數</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project, user in projects %}
+                    <tr>
+                        <td>{{ project.project_name }}</td>
+                        <td>{{ project.organization_name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ project.project_attribute }}</td>
+                        <td>{{ project.analysis_nature }}</td>
+                        <td>{{ project.sroi_score or '尚未計算' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">目前無專案</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

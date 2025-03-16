@@ -1,0 +1,6 @@
+{% if not current_user.can_create_project()[0] %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ current_user.can_create_project()[1] }}
+</div>
+{% endif %} 

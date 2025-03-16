@@ -1,0 +1,42 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}編輯用戶{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">編輯用戶 - {{ user.username }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+            <div class="mb-3">
+                <label for="email" class="form-label">電子郵件</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="role" class="form-label">角色</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>一般用戶</option>
+                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>管理員</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="account_expires" class="form-label">帳號到期日</label>
+                <input type="date" class="form-control" id="account_expires" name="account_expires" 
+                       value="{{ user.account_expires.strftime('%Y-%m-%d') if user.account_expires else '' }}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password_expires" class="form-label">密碼到期日</label>
+                <input type="date" class="form-control" id="password_expires" name="password_expires"
+                       value="{{ user.password_expires.strftime('%Y-%m-%d') if user.password_expires else '' }}">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">儲存變更</button>
+            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %} 

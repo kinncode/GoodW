@@ -1,0 +1,56 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}新增帳號{% endblock %}
+
+{% block page_title %}新增帳號{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">返回</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <!-- 顯示提示訊息 -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- 表單 -->
+                <form action="{{ url_for('admin.add_user') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">使用者名稱</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密碼</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label">角色</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="user" selected>一般用戶</option>
+                            <option value="admin">管理員</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">新增帳號</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
